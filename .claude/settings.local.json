@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install:*)",
+      "Bash(npx cap init:*)",
+      "Bash(npx cap:*)",
+      "Bash(./gradlew:*)",
+      "Bash(dir /s /b C:UserscraProyectosmd-viewer*.html 2)",
+      "Bash(nul)",
+      "Bash(findstr:*)",
+      "Bash(mkdir:*)",
+      "Bash(.gradlew.bat tasks --group=\"install\")",
+      "Bash(git init:*)",
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$(cat <<''EOF''\nfeat: initial commit - MD Viewer Mobile v2.0.0\n\nComplete modular architecture with ES6 modules for cross-platform Markdown viewer.\n\nFeatures:\n- Modular architecture (9 modules + orchestrator)\n- Tab system for multiple open files\n- Folder import with structure preservation\n- Search with highlighting\n- Android and iOS support via Capacitor\n- Dark theme optimized for OLED\n- GitHub Flavored Markdown support\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
