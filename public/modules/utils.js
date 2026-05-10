@@ -50,3 +50,27 @@ export function escapeHtml(text) {
 export function escapeAttr(text) {
   return text.replace(/'/g, "\\'").replace(/"/g, '&quot;');
 }
+
+export function utf8ToBase64(text) {
+  const encoder = new TextEncoder();
+  const bytes = encoder.encode(text);
+  const binaryString = String.fromCharCode(...bytes);
+  return btoa(binaryString);
+}
+
+export function isBase64(str) {
+  if (typeof str !== 'string') return false;
+  if (str.length === 0) return false;
+
+  // Verificar si contiene solo caracteres válidos de base64
+  const base64Regex = /^[A-Za-z0-9+/]*={0,2}$/;
+  if (!base64Regex.test(str)) return false;
+
+  // Intentar decodificar para verificar
+  try {
+    atob(str);
+    return true;
+  } catch (e) {
+    return false;
+  }
+}

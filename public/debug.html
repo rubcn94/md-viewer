@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MD Viewer - Debug</title>
+<style>
+  body {
+    font-family: monospace;
+    background: #000;
+    color: #0f0;
+    padding: 20px;
+    font-size: 12px;
+  }
+  .error { color: #f00; }
+  .success { color: #0f0; }
+  .info { color: #0ff; }
+  pre {
+    background: #111;
+    padding: 10px;
+    border: 1px solid #333;
+    overflow-x: auto;
+  }
+  button {
+    background: #333;
+    color: #0f0;
+    border: 1px solid #0f0;
+    padding: 10px 20px;
+    margin: 10px 5px;
+    cursor: pointer;
+    font-family: monospace;
+  }
+  button:hover { background: #444; }
+</style>
+</head>
+<body>
+<h1>🐛 MD Viewer - Modo Debug</h1>
+<div id="logs"></div>
+
+<h2>Tests:</h2>
+<button onclick="testCapacitor()">Test Capacitor</button>
+<button onclick="testImport()">Test Import Module</button>
+<button onclick="testStorage()">Test Storage Module</button>
+<button onclick="clearLogs()">Clear Logs</button>
+
+<script type="module">
+const logs = document.getElementById('logs');
+
+function log(message, type = 'info') {
+  const div = document.createElement('div');
+  div.className = type;
+  div.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+  logs.appendChild(div);
+  console.log(message);
+}
+
+window.log = log;
+
+// Test Capacitor availability
+window.testCapacitor = function() {
+  log('=== Testing Capacitor ===');
+
+  if (window.Capacitor) {
+    log('✓ window.Capacitor exists', 'success');
+    log(`Platform: ${window.Capacitor.getPlatform()}`, 'info');
+
+    if (window.Capacitor.Plugins) {
+      log('✓ window.Capacitor.Plugins exists', 'success');
+
+      const { Filesystem, Preferences, FilePicker } = window.Capacitor.Plugins;
+
+      log(`Filesystem: ${!!Filesystem ? '✓' : '✗'}`, Filesystem ? 'success' : 'error');
+      log(`Preferences: ${!!Preferences ? '✓' : '✗'}`, Preferences ? 'success' : 'error');
+      log(`FilePicker: ${!!FilePicker ? '✓' : '✗'}`, FilePicker ? 'success' : 'error');
+    } else {
+      log('✗ window.Capacitor.Plugins NOT FOUND', 'error');
+    }
+  } else {
+    log('✗ window.Capacitor NOT FOUND (running in web mode?)', 'error');
+  }
+}
+
+// Test import module
+window.testImport = async function() {
+  log('=== Testing Import Module ===');
+
+  try {
+    const importModule = await import('./modules/import.js');
+    log('✓ import.js loaded successfully', 'success');
+    log(`Functions: ${Object.keys(importModule).join(', ')}`, 'info');
+
+    if (typeof importModule.importFiles === 'function') {
+      log('✓ importFiles() is a function', 'success');
+    } else {
+      log('✗ importFiles() NOT a function', 'error');
+    }
+  } catch (e) {
+    log(`✗ Error loading import.js: ${e.message}`, 'error');
+    log(e.stack, 'error');
+  }
+}
+
+// Test storage module
+window.testStorage = async function() {
+  log('=== Testing Storage Module ===');
+
+  try {
+    const storageModule = await import('./modules/storage.js');
+    log('✓ storage.js loaded successfully', 'success');
+    log(`Functions: ${Object.keys(storageModule).join(', ')}`, 'info');
+  } catch (e) {
+    log(`✗ Error loading storage.js: ${e.message}`, 'error');
+    log(e.stack, 'error');
+  }
+}
+
+window.clearLogs = function() {
+  logs.innerHTML = '';
+}
+
+// Auto-run tests on load
+log('🚀 Debug page loaded', 'success');
+log('Click buttons above to run tests', 'info');
+
+// Catch all errors
+window.addEventListener('error', (e) => {
+  log(`💥 Global Error: ${e.message}`, 'error');
+  log(`File: ${e.filename}:${e.lineno}:${e.colno}`, 'error');
+  log(e.error?.stack || '', 'error');
+});
+
+window.addEventListener('unhandledrejection', (e) => {
+  log(`💥 Unhandled Promise Rejection: ${e.reason}`, 'error');
+});
+
+// Try to load main app
+try {
+  import('./app.js').then(() => {
+    log('✓ app.js loaded successfully', 'success');
+  }).catch(e => {
+    log(`✗ app.js failed to load: ${e.message}`, 'error');
+    log(e.stack, 'error');
+  });
+} catch (e) {
+  log(`✗ Cannot import app.js: ${e.message}`, 'error');
+}
+</script>
+
+</body>
+</html>

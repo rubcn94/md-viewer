@@ -3,10 +3,19 @@
 export const APP_DIR = 'md-viewer-docs';
 export let fileIndex = [];
 let Filesystem, Preferences;
+let platform = 'unknown'; // 'capacitor' or 'electron'
 
 export function initializePlugins(plugins) {
-  Filesystem = plugins.Filesystem;
-  Preferences = plugins.Preferences;
+  if (plugins.Filesystem && plugins.Preferences) {
+    // Capacitor (mobile)
+    Filesystem = plugins.Filesystem;
+    Preferences = plugins.Preferences;
+    platform = 'capacitor';
+  } else if (window.electronAPI) {
+    // Electron (desktop)
+    platform = 'electron';
+  }
+  console.log(`[Storage] Platform detected: ${platform}`);
 }
 
 export function getFilesystem() {
@@ -17,10 +26,22 @@ export function getPreferences() {
   return Preferences;
 }
 
+export function getPlatform() {
+  return platform;
+}
+
 export async function loadFileIndex() {
   try {
-    const { value } = await Preferences.get({ key: 'fileIndex' });
-    fileIndex = value ? JSON.parse(value) : [];
+    if (platform === 'electron') {
+      const { value } = await window.electronAPI.storage.get('fileIndex');
+      fileIndex = value ? JSON.parse(value) : [];
+    } else if (platform === 'capacitor') {
+      const { value } = await Preferences.get({ key: 'fileIndex' });
+      fileIndex = value ? JSON.parse(value) : [];
+    } else {
+      console.warn('[Storage] Unknown platform, using empty fileIndex');
+      fileIndex = [];
+    }
     return fileIndex;
   } catch (e) {
     console.error('Error loading file index:', e);
@@ -31,17 +52,37 @@ export async function loadFileIndex() {
 
 export async function saveFileIndex() {
   try {
-    await Preferences.set({
-      key: 'fileIndex',
-      value: JSON.stringify(fileIndex)
-    });
+    const data = JSON.stringify(fileIndex);
+    if (platform === 'electron') {
+      await window.electronAPI.storage.set('fileIndex', data);
+    } else if (platform === 'capacitor') {
+      await Preferences.set({
+        key: 'fileIndex',
+        value: data
+      });
+    }
   } catch (e) {
     console.error('Error saving file index:', e);
   }
 }
 
 export function addFile(file) {
-  fileIndex.push(file);
+  // Ensure file has metadata fields
+  const fileWithMeta = {
+    ...file,
+    read: file.read || false,
+    bookmark: file.bookmark || null, // {line: number, scroll: number}
+    highlights: file.highlights || [] // [{id, startLine, endLine, text, color}]
+  };
+  fileIndex.push(fileWithMeta);
+}
+
+export async function updateFileMetadata(path, metadata) {
+  const file = fileIndex.find(f => f.path === path);
+  if (file) {
+    Object.assign(file, metadata);
+    await saveFileIndex();
+  }
 }
 
 export function removeFile(path) {

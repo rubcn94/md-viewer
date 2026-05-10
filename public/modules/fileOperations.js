@@ -1,6 +1,6 @@
 // ── File Operations ────────────────────────────────────
 
-import { getFile, removeFile as removeFromIndex, getFilesystem, saveFileIndex } from './storage.js';
+import { getFile, removeFile as removeFromIndex, getFilesystem, saveFileIndex, getPlatform } from './storage.js';
 import { renderMarkdown, renderRaw, renderTree } from './render.js';
 import { showToast, showEmpty } from './ui.js';
 import { APP_DIR } from './storage.js';
@@ -63,17 +63,22 @@ export function toggleRaw() {
 export async function removeFile(filePath) {
   if (!confirm(`¿Eliminar "${filePath}"?`)) return;
 
-  const Filesystem = getFilesystem();
+  const platform = getPlatform();
 
-  if (Filesystem) {
-    try {
-      await Filesystem.deleteFile({
-        path: `${APP_DIR}/${filePath}`,
-        directory: 'DATA'
-      });
-    } catch (e) {
-      console.log('Error deleting file from filesystem:', e.message);
+  try {
+    if (platform === 'electron') {
+      await window.electronAPI.filesystem.deleteFile(filePath);
+    } else if (platform === 'capacitor') {
+      const Filesystem = getFilesystem();
+      if (Filesystem) {
+        await Filesystem.deleteFile({
+          path: `${APP_DIR}/${filePath}`,
+          directory: 'DATA'
+        });
+      }
     }
+  } catch (e) {
+    console.log('Error deleting file from filesystem:', e.message);
   }
 
   removeFromIndex(filePath);

@@ -1,0 +1,43 @@
+# Zsh configuration for Termux
+# oh-my-posh disabled temporarily (SIGSYS crash fix)
+
+# Basic zsh configuration
+HISTFILE=~/.zsh_history
+HISTSIZE=10000
+SAVEHIST=10000
+setopt appendhistory
+
+# Colors
+autoload -U colors && colors
+
+# Completion
+autoload -Uz compinit
+compinit
+
+# Prompt básico (mientras oh-my-posh está desactivado)
+PROMPT='%F{cyan}%n@%m%f:%F{yellow}%~%f$ '
+
+# Aliases útiles
+alias ll='ls -lah'
+alias grep='grep --color=auto'
+alias ..='cd ..'
+alias ...='cd ../..'
+
+# oh-my-posh (comentado - causa SIGSYS en Android)
+# if command -v oh-my-posh &> /dev/null; then
+#     eval "$(oh-my-posh init zsh --config ~/.poshthemes/android-custom.omp.json)"
+# fi
+
+# Termux-specific
+if [ -d "$HOME/storage" ]; then
+    export TERMUX=1
+fi
+
+# Android SDK (si lo tienes instalado)
+if [ -d "$HOME/android-sdk" ]; then
+    export ANDROID_HOME=$HOME/android-sdk
+    export PATH=$PATH:$ANDROID_HOME/tools:$ANDROID_HOME/platform-tools
+fi
+
+# Custom paths
+export PATH=$HOME/bin:$PATH

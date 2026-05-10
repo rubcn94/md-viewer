@@ -3,9 +3,17 @@
 import { escapeHtml, escapeAttr } from './utils.js';
 import { getFiles } from './storage.js';
 
+// Filter state
+let showOnlyFavorites = false;
+
 export async function renderTree(currentFile = null) {
   const treeEl = document.getElementById('fileTree');
-  const fileIndex = getFiles();
+  let fileIndex = getFiles();
+
+  // Apply favorites filter if enabled
+  if (showOnlyFavorites) {
+    fileIndex = fileIndex.filter(f => f.starred);
+  }
 
   if (fileIndex.length === 0) {
     treeEl.innerHTML = `
@@ -16,59 +24,90 @@ export async function renderTree(currentFile = null) {
     return;
   }
 
-  const folders = {};
-  const rootFiles = [];
+  // Build recursive tree structure
+  const tree = buildFileTree(fileIndex);
+  const html = renderTreeNode(tree, currentFile);
+  treeEl.innerHTML = html;
+}
 
-  for (const file of fileIndex) {
+function buildFileTree(files) {
+  const tree = { folders: {}, files: [] };
+
+  for (const file of files) {
     if (file.path.includes('/')) {
       const parts = file.path.split('/');
-      const folder = parts[0];
-      if (!folders[folder]) folders[folder] = [];
-      folders[folder].push(file);
+      insertIntoTree(tree, parts, file);
     } else {
-      rootFiles.push(file);
+      tree.files.push(file);
     }
   }
 
+  return tree;
+}
+
+function insertIntoTree(node, parts, file) {
+  if (parts.length === 1) {
+    node.files.push(file);
+    return;
+  }
+
+  const folderName = parts[0];
+  if (!node.folders[folderName]) {
+    node.folders[folderName] = { folders: {}, files: [] };
+  }
+
+  insertIntoTree(node.folders[folderName], parts.slice(1), file);
+}
+
+function renderTreeNode(node, currentFile, pathPrefix = '') {
   let html = '';
 
-  for (const [folderName, files] of Object.entries(folders)) {
+  // Render folders
+  for (const [folderName, subNode] of Object.entries(node.folders)) {
+    const folderPath = pathPrefix ? `${pathPrefix}/${folderName}` : folderName;
+    const fileCount = countFiles(subNode);
+
     html += `
-      <div class="folder-item" data-folder="${escapeHtml(folderName)}">
+      <div class="folder-item" data-folder="${escapeAttr(folderPath)}">
         <div class="folder-header" onclick="window.toggleFolder(this)">
           <span class="folder-icon">▶</span>
           <span class="folder-name">${escapeHtml(folderName)}</span>
-          <button class="btn-remove-folder" onclick="event.stopPropagation(); window.removeFolder('${escapeAttr(folderName)}')" title="Eliminar carpeta">✕</button>
+          <span class="folder-count">${fileCount}</span>
+          <button class="btn-remove-folder" onclick="event.stopPropagation(); window.removeFolder('${escapeAttr(folderPath)}')" title="Eliminar carpeta">✕</button>
         </div>
         <div class="folder-children">
-    `;
-
-    for (const file of files) {
-      const activeClass = currentFile && currentFile.path === file.path ? ' active' : '';
-      html += `
-        <div class="file-item${activeClass}" data-path="${escapeAttr(file.path)}">
-          <span class="file-icon" onclick="window.openFile('${escapeAttr(file.path)}')">📄</span>
-          <span class="file-name" onclick="window.openFile('${escapeAttr(file.path)}')">${escapeHtml(file.name)}</span>
-          <button class="btn-remove-file" onclick="event.stopPropagation(); window.removeFile('${escapeAttr(file.path)}')" title="Eliminar archivo">✕</button>
+          ${renderTreeNode(subNode, currentFile, folderPath)}
         </div>
-      `;
-    }
-
-    html += '</div></div>';
+      </div>
+    `;
   }
 
-  for (const file of rootFiles) {
+  // Render files
+  for (const file of node.files) {
     const activeClass = currentFile && currentFile.path === file.path ? ' active' : '';
+    const readIndicator = file.read ? '<span class="read-tick">✓</span>' : '';
+    const bookmarkIndicator = file.bookmark ? '<span class="bookmark-flag">📌</span>' : '';
+
     html += `
       <div class="file-item${activeClass}" data-path="${escapeAttr(file.path)}">
         <span class="file-icon" onclick="window.openFile('${escapeAttr(file.path)}')">📄</span>
         <span class="file-name" onclick="window.openFile('${escapeAttr(file.path)}')">${escapeHtml(file.name)}</span>
+        ${readIndicator}
+        ${bookmarkIndicator}
         <button class="btn-remove-file" onclick="event.stopPropagation(); window.removeFile('${escapeAttr(file.path)}')" title="Eliminar archivo">✕</button>
       </div>
     `;
   }
 
-  treeEl.innerHTML = html;
+  return html;
+}
+
+function countFiles(node) {
+  let count = node.files.length;
+  for (const subNode of Object.values(node.folders)) {
+    count += countFiles(subNode);
+  }
+  return count;
 }
 
 export function renderMarkdown(file) {
@@ -76,13 +115,8 @@ export function renderMarkdown(file) {
 
   try {
     const html = marked.parse(file.content);
+
     contentArea.innerHTML = `
-      <div class="doc-header">
-        <span class="doc-title">${escapeHtml(file.name)}</span>
-        <span class="doc-meta">${file.content.length} caracteres</span>
-        <button class="btn-raw" onclick="window.toggleRaw()">Raw</button>
-        <button class="btn-close" onclick="window.closeTab('${escapeAttr(file.path)}')">✕</button>
-      </div>
       <div class="content-area" style="flex:1; overflow-y:auto; padding:24px 20px;">
         <div class="md-body">${html}</div>
       </div>
@@ -93,6 +127,16 @@ export function renderMarkdown(file) {
     document.querySelectorAll('.md-body pre code').forEach((block) => {
       hljs.highlightElement(block);
     });
+
+    // Restore highlights
+    if (window.restoreHighlights) {
+      window.restoreHighlights(file);
+    }
+
+    // Initialize highlight system (Notion-style floating menu)
+    if (window.initHighlightSystem) {
+      window.initHighlightSystem();
+    }
 
     return true;
   } catch (e) {
@@ -196,4 +240,13 @@ function addCopyButtons() {
     pre.style.position = 'relative';
     pre.appendChild(btn);
   });
+}
+
+
+// -- Favorites Filter --
+
+export function toggleFavoritesFilter() {
+  const checkbox = document.getElementById('filterFavorites');
+  showOnlyFavorites = checkbox.checked;
+  renderTree();
 }

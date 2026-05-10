@@ -1,18 +1,26 @@
 {
   "name": "md-viewer",
-  "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "version": "2.0.0",
+  "description": "Cross-platform Markdown viewer with reading progress tracking",
+  "main": "electron-main.js",
   "scripts": {
     "dev:web": "node server.js",
+    "electron": "electron .",
+    "electron:dev": "NODE_ENV=development electron .",
+    "build:electron": "electron-builder",
     "sync": "npx cap sync",
     "android": "npx cap open android",
     "build:android": "npx cap copy android && npx cap sync android",
     "ios": "npx cap open ios",
     "build:ios": "npx cap copy ios && npx cap sync ios"
   },
-  "keywords": [],
-  "author": "",
+  "keywords": [
+    "markdown",
+    "viewer",
+    "electron",
+    "capacitor"
+  ],
+  "author": "Ruben",
   "license": "ISC",
   "dependencies": {
     "@capacitor/android": "^6.2.0",
@@ -21,11 +29,49 @@
     "@capacitor/filesystem": "^6.0.2",
     "@capacitor/ios": "^6.2.0",
     "@capacitor/preferences": "^6.0.3",
-    "@capawesome/capacitor-file-picker": "^5.2.0",
+    "@capawesome/capacitor-file-picker": "^6.2.0",
     "chokidar": "^5.0.0",
     "cors": "^2.8.6",
+    "electron-updater": "^6.8.3",
     "express": "^5.2.1",
     "highlight.js": "^11.11.1",
+    "jszip": "^3.10.1",
     "marked": "^18.0.3"
+  },
+  "devDependencies": {
+    "electron": "^42.0.1",
+    "electron-builder": "^26.8.1"
+  },
+  "build": {
+    "appId": "com.mdviewer.app",
+    "productName": "MD Viewer",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "electron-main.js",
+      "electron-preload.js",
+      "public/**/*",
+      "node_modules/**/*",
+      "!node_modules/@capacitor/**/*",
+      "!node_modules/@capawesome/**/*",
+      "!android/**/*",
+      "!ios/**/*",
+      "!build/**/*"
+    ],
+    "win": {
+      "target": "nsis"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "ruben",
+      "repo": "md-viewer"
+    }
   }
 }

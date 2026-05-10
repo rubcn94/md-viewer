@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover">
 <meta name="theme-color" content="#0f0f13">
 <meta name="mobile-web-app-capable" content="yes">
+<!-- Suppress Android text selection handles -->
+<meta name="format-detection" content="telephone=no">
 <title>MD Viewer</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
 <style>
@@ -28,14 +30,23 @@
     --mono: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
   }
 
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+
   html, body {
     height: 100%;
     font-family: -apple-system, 'Segoe UI', system-ui, sans-serif;
     background: var(--bg);
     color: var(--text);
     overflow: hidden;
+    /* Suppress Android text selection menu */
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
   }
 
   /* ── Layout ── */
@@ -202,6 +213,15 @@
     text-overflow: ellipsis;
   }
 
+  .folder-count {
+    font-size: 10px;
+    color: var(--text-muted);
+    background: var(--surface2);
+    padding: 2px 6px;
+    border-radius: 10px;
+    margin-right: 4px;
+  }
+
   .btn-remove-folder {
     background: none;
     border: none;
@@ -250,6 +270,17 @@
     text-overflow: ellipsis;
   }
 
+  .read-tick {
+    font-size: 11px;
+    color: var(--green);
+    margin-left: 4px;
+  }
+
+  .bookmark-flag {
+    font-size: 11px;
+    margin-left: 2px;
+  }
+
   /* ── Main content ── */
   .main {
     flex: 1;
@@ -258,44 +289,161 @@
     overflow: hidden;
   }
 
-  .doc-header {
-    padding: 10px 16px;
-    border-bottom: 1px solid var(--border);
+  /* ── Highlight System (Notion-style Floating Menu) ── */
+
+  /* CRITICAL: Suppress Android default text selection toolbar */
+  .md-body {
+    -webkit-user-select: text;
+    user-select: text;
+    -webkit-touch-callout: none; /* iOS callout */
+  }
+
+  .md-body::selection {
+    background: rgba(93, 106, 250, 0.3);
+  }
+
+  .highlight-floating-menu {
+    position: fixed; /* Changed from absolute to fixed for better mobile positioning */
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+    padding: 8px;
+    display: flex;
+    gap: 6px;
+    z-index: 9999; /* Increased to ensure it's above everything */
+    opacity: 0;
+    transform: translateY(-4px) scale(0.95);
+    transition: opacity 0.12s cubic-bezier(0.2, 0, 0.2, 1), transform 0.12s cubic-bezier(0.2, 0, 0.2, 1);
+    pointer-events: none;
+    will-change: opacity, transform; /* Hardware acceleration */
+  }
+
+  .highlight-floating-menu.visible {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    pointer-events: auto;
+  }
+
+  .highlight-floating-menu .color-btn {
+    width: 32px;
+    height: 32px;
+    border: 2px solid var(--border);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+    padding: 0;
+    background: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .highlight-floating-menu .color-btn:active {
+    transform: scale(0.95);
+  }
+
+  .highlight-floating-menu .color-btn:hover {
+    border-color: white;
+    transform: scale(1.15);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+  }
+
+  /* Separator in menu */
+  .highlight-floating-menu .menu-separator {
+    width: 1px;
+    height: 32px;
+    background: var(--border);
+    margin: 0 2px;
+  }
+
+  /* Remove button */
+  .highlight-floating-menu .remove-btn {
+    width: 32px;
+    height: 32px;
+    border: 2px solid var(--border);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+    padding: 0;
+    background: var(--surface2);
+    color: var(--red);
+    font-size: 16px;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .highlight-floating-menu .remove-btn:active {
+    transform: scale(0.95);
+  }
+
+  .highlight-floating-menu .remove-btn:hover {
+    border-color: var(--red);
+    background: var(--red);
+    color: white;
+    transform: scale(1.15);
+    box-shadow: 0 2px 8px rgba(237, 66, 69, 0.3);
+  }
+
+  .md-body .highlight {
+    border-radius: 2px;
+    padding: 1px 2px;
+    cursor: pointer;
+  }
+
+  .md-body .highlight:hover {
+    opacity: 0.8;
+  }
+
+  /* ── Context Menu (Long Press) ── */
+  .context-menu {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+    z-index: 3000;
+    min-width: 180px;
+    padding: 6px;
+    animation: menuFadeIn 0.15s ease;
+  }
+
+  @keyframes menuFadeIn {
+    from {
+      opacity: 0;
+      transform: scale(0.95);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  .context-menu-item {
     display: flex;
     align-items: center;
     gap: 10px;
-    flex-shrink: 0;
-    min-height: 44px;
-  }
-
-  .doc-title {
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--text);
-    flex: 1;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  .doc-meta {
-    font-size: 11px;
-    color: var(--text-muted);
-    white-space: nowrap;
-  }
-
-  .btn-raw {
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    color: var(--text-dim);
-    border-radius: var(--radius);
-    padding: 4px 10px;
-    font-size: 11px;
+    padding: 8px 12px;
+    border-radius: 6px;
     cursor: pointer;
-    transition: all 0.2s;
+    font-size: 13px;
+    color: var(--text-dim);
+    transition: background 0.15s;
+    user-select: none;
   }
 
-  .btn-raw:hover { border-color: var(--accent); color: var(--accent); }
+  .context-menu-item:hover {
+    background: var(--surface2);
+  }
+
+  .context-menu-item.context-menu-delete:hover {
+    background: rgba(237, 66, 69, 0.15);
+    color: var(--red);
+  }
+
+  .context-menu-item span:first-child {
+    font-size: 16px;
+  }
 
   .btn-close {
     background: none;
@@ -782,7 +930,7 @@
     position: fixed;
     inset: 0;
     background: rgba(0,0,0,0.5);
-    z-index: 50;
+    z-index: 150;
   }
 
   /* ── Mobile ── */
@@ -794,7 +942,7 @@
       top: var(--header-h);
       left: 0;
       height: calc(100% - var(--header-h));
-      z-index: 60;
+      z-index: 200;
       transform: translateX(-100%);
       padding-top: env(safe-area-inset-top);
     }
@@ -808,8 +956,6 @@
       padding: 16px 14px;
       -webkit-overflow-scrolling: touch;
     }
-
-    .doc-header { padding: 8px 12px; }
 
     .md-body { font-size: 14px; }
     .md-body h1 { font-size: 1.5em; }
@@ -871,6 +1017,10 @@
           <span style="font-size: 16px;">📁</span>
           <span>Importar archivos</span>
         </button>
+        <label class="filter-favorites" style="display: flex; align-items: center; margin-top: 8px; padding: 8px; cursor: pointer; user-select: none; font-size: 13px; color: var(--text-dim);">
+          <input type="checkbox" id="filterFavorites" onchange="window.toggleFavoritesFilter()" style="margin-right: 6px;">
+          <span>⭐ Solo favoritos</span>
+        </label>
       </div>
       <div class="file-tree" id="fileTree">
         <div style="padding: 20px 12px; text-align: center; color: var(--text-muted); font-size: 12px;">
@@ -897,6 +1047,35 @@
 <!-- Librerías -->
 <script src="https://cdn.jsdelivr.net/npm/marked@11.0.0/marked.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+
+<!-- Global Error Handler -->
+<script>
+window.addEventListener('error', (e) => {
+  console.error('💥 Global Error:', e.message, e.filename, e.lineno, e.colno);
+  const contentArea = document.getElementById('contentArea');
+  if (contentArea && !contentArea.innerHTML.includes('Error de')) {
+    contentArea.innerHTML = `
+      <div style="padding: 20px; color: #ed4245; font-family: monospace; font-size: 12px;">
+        <h2 style="color: #ed4245;">❌ Error JavaScript</h2>
+        <p><strong>Mensaje:</strong> ${e.message || 'Unknown error'}</p>
+        <p><strong>Archivo:</strong> ${e.filename || 'N/A'}:${e.lineno || '?'}:${e.colno || '?'}</p>
+        <pre style="background: #17171f; padding: 10px; overflow-x: auto; border: 1px solid #2a2a3a; border-radius: 8px;">${e.error?.stack || 'No stack trace'}</pre>
+        <p style="margin-top: 20px;">
+          <strong>Soluciones:</strong><br>
+          1. Revisa la consola del navegador (F12)<br>
+          2. Abre <a href="debug.html" style="color: #5865f2;">debug.html</a> para más información<br>
+          3. Verifica que los plugins de Capacitor están instalados
+        </p>
+      </div>
+    `;
+  }
+});
+
+window.addEventListener('unhandledrejection', (e) => {
+  console.error('💥 Unhandled Promise Rejection:', e.reason);
+});
+</script>
 
 <script type="module" src="app.js"></script>
 </body>
