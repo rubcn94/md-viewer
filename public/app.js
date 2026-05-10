@@ -27,19 +27,19 @@ let pluginsReady = false;
 // ── Initialization ────────────────────────────────────
 async function init() {
   try {
-    console.log('[INFO] Iniciando MD Viewer...');
+    // console.log('[INFO] Iniciando MD Viewer...');
 
     // Detectar plataforma: Electron o Capacitor
     if (window.electronAPI) {
       // Electron Desktop
-      console.log('[DEBUG] Electron detected');
+      // console.log('[DEBUG] Electron detected');
       initializePlugins({}); // Pasamos objeto vacío, Electron usa window.electronAPI
       initializeFilePicker(null); // No necesitamos FilePicker en Electron
       pluginsReady = true;
-      console.log('[DEBUG] Electron API ready');
+      // console.log('[DEBUG] Electron API ready');
     } else if (window.Capacitor) {
       // Capacitor Mobile
-      console.log('[DEBUG] Capacitor detected');
+      // console.log('[DEBUG] Capacitor detected');
 
       await new Promise(resolve => {
         if (window.Capacitor.Plugins) {
@@ -62,11 +62,11 @@ async function init() {
       initializePlugins({ Filesystem, Preferences });
       initializeFilePicker(FilePicker);
 
-      console.log('[DEBUG] Plugins cargados:', {
-        Filesystem: !!Filesystem,
-        Preferences: !!Preferences,
-        FilePicker: !!FilePicker,
-      });
+      // console.log('[DEBUG] Plugins cargados:', {
+      //   Filesystem: !!Filesystem,
+      //   Preferences: !!Preferences,
+      //   FilePicker: !!FilePicker,
+      // });
 
       pluginsReady = true;
     } else {
@@ -74,25 +74,25 @@ async function init() {
     }
 
     // Load saved files
-    console.log('[DEBUG] Loading file index...');
+    // console.log('[DEBUG] Loading file index...');
     await loadFileIndex();
 
-    console.log('[DEBUG] Rendering tree...');
+    // console.log('[DEBUG] Rendering tree...');
     await renderTree();
 
     // Initialize search
-    console.log('[DEBUG] Initializing search...');
+    // console.log('[DEBUG] Initializing search...');
     initSearch();
 
     // Initialize tabs
-    console.log('[DEBUG] Rendering tabs...');
+    // console.log('[DEBUG] Rendering tabs...');
     renderTabs();
 
     // Initialize long-press gestures
-    console.log('[DEBUG] Initializing long-press...');
+    // console.log('[DEBUG] Initializing long-press...');
     initLongPress();
 
-    console.log('[INFO] ✓ MD Viewer Mobile iniciado correctamente');
+    // console.log('[INFO] ✓ MD Viewer Mobile iniciado correctamente');
   } catch (error) {
     console.error('[ERROR] Error fatal al inicializar:', error);
 

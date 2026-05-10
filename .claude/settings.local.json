@@ -42,7 +42,9 @@
       "Bash(npm run sync:*)",
       "Bash(npm run electron:*)",
       "Bash(npm run build:electron:*)",
-      "Bash(dir:*)"
+      "Bash(dir:*)",
+      "Bash(git commit:*)",
+      "Bash(./gradlew.bat:*)"
     ],
     "deny": [],
     "ask": []
