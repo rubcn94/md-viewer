@@ -44,7 +44,11 @@
       "Bash(npm run build:electron:*)",
       "Bash(dir:*)",
       "Bash(git commit:*)",
-      "Bash(./gradlew.bat:*)"
+      "Bash(./gradlew.bat:*)",
+      "Bash(keytool:*)",
+      "Bash(jarsigner:*)",
+      "Bash(adb uninstall:*)",
+      "Bash(adb install:*)"
     ],
     "deny": [],
     "ask": []
