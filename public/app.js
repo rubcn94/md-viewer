@@ -1,12 +1,12 @@
 // MD Viewer Mobile - Main App Orchestrator
 
-import { initializePlugins, loadFileIndex, saveFileIndex } from './modules/storage.js';
-import { toggleSidebar, showEmpty } from './modules/ui.js';
+import { initializePlugins, loadFileIndex, saveFileIndex, getPlatform } from './modules/storage.js';
+import { toggleSidebar, showEmpty, showToast } from './modules/ui.js';
 import { renderTree, toggleFavoritesFilter } from './modules/render.js';
 import { openFile, toggleRaw, removeFile, getCurrentFile, clearCurrentFile } from './modules/fileOperations.js';
 import { toggleFolder, removeFolder } from './modules/folderOperations.js';
 import { initSearch } from './modules/search.js';
-import { importFiles, initializeFilePicker, importFolder } from './modules/import.js';
+import { importFiles, initializeFilePicker, importFolder, importFromDragDrop } from './modules/import.js';
 import { addTab, closeTab, closeTabByPath, switchToTab, switchToNextTab, closeAllTabs, renderTabs } from './modules/tabs.js';
 import {
   toggleReadStatus,
@@ -23,6 +23,84 @@ import { initLongPress } from './modules/longPress.js';
 
 // ── Global State ──────────────────────────────────────
 let pluginsReady = false;
+
+// ── Drag & Drop Setup (Desktop only) ──────────────────
+function initDragDrop() {
+  const dropOverlay = document.createElement('div');
+  dropOverlay.className = 'drop-overlay';
+  dropOverlay.innerHTML = `
+    <div class="drop-overlay-content">
+      <div class="drop-icon">📁</div>
+      <div class="drop-text">Suelta archivos o carpetas aquí</div>
+      <div class="drop-hint">Se importarán solo archivos .md, .txt y .zip</div>
+    </div>
+  `;
+  document.body.appendChild(dropOverlay);
+
+  let dragCounter = 0;
+
+  // Prevenir comportamiento por defecto en TODO el document
+  document.addEventListener('dragenter', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    dragCounter++;
+    if (e.dataTransfer && e.dataTransfer.types.includes('Files')) {
+      dropOverlay.classList.add('active');
+    }
+  }, true); // useCapture = true para capturar antes que elementos hijos
+
+  document.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    // IMPORTANTE: siempre setear dropEffect en dragover
+    if (e.dataTransfer && e.dataTransfer.types.includes('Files')) {
+      e.dataTransfer.dropEffect = 'copy';
+    }
+  }, true);
+
+  document.addEventListener('dragleave', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    dragCounter--;
+    if (dragCounter === 0) {
+      dropOverlay.classList.remove('active');
+    }
+  }, true);
+
+  document.addEventListener('drop', async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    dragCounter = 0;
+    dropOverlay.classList.remove('active');
+
+    if (e.dataTransfer && e.dataTransfer.items && e.dataTransfer.items.length > 0) {
+      // Usar DataTransferItemList para soportar carpetas
+      const items = Array.from(e.dataTransfer.items);
+      await importFromDragDrop(items);
+    } else if (e.dataTransfer && e.dataTransfer.files.length > 0) {
+      // Fallback para navegadores que no soportan DataTransferItem
+      const files = Array.from(e.dataTransfer.files);
+
+      // Convertir Files a formato compatible
+      const items = files.map(file => ({
+        kind: 'file',
+        getAsFile: () => file,
+        webkitGetAsEntry: () => ({
+          isFile: true,
+          isDirectory: false,
+          name: file.name,
+          file: (callback) => callback(file)
+        })
+      }));
+
+      await importFromDragDrop(items);
+    }
+  }, true);
+}
 
 // ── Initialization ────────────────────────────────────
 async function init() {
@@ -91,6 +169,12 @@ async function init() {
     // Initialize long-press gestures
     // console.log('[DEBUG] Initializing long-press...');
     initLongPress();
+
+    // Initialize drag & drop (desktop only)
+    if (getPlatform() === 'electron') {
+      // console.log('[DEBUG] Initializing drag & drop...');
+      initDragDrop();
+    }
 
     // console.log('[INFO] ✓ MD Viewer Mobile iniciado correctamente');
   } catch (error) {

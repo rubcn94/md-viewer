@@ -110,6 +110,70 @@ function countFiles(node) {
   return count;
 }
 
+// ── Helper: slugify para IDs de headers ──────────────
+function slugify(text) {
+  return text
+    .toString()
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, '-')           // Espacios → guiones
+    .replace(/[^\w\-]+/g, '')       // Remover caracteres no alfanuméricos
+    .replace(/\-\-+/g, '-')         // Múltiples guiones → uno solo
+    .replace(/^-+/, '')             // Remover guión al inicio
+    .replace(/-+$/, '');            // Remover guión al final
+}
+
+// ── Configurar marked.js para generar IDs ────────────
+function configureMarked() {
+  const renderer = new marked.Renderer();
+
+  // Override del renderer de headers para añadir IDs
+  renderer.heading = function(text, level) {
+    const escapedText = slugify(text);
+    return `<h${level} id="${escapedText}">${text}</h${level}>`;
+  };
+
+  marked.setOptions({
+    renderer: renderer,
+    breaks: true,       // Saltos de línea automáticos (GFM)
+    gfm: true          // GitHub Flavored Markdown
+  });
+}
+
+// ── Inicializar configuración de marked ──────────────
+configureMarked();
+
+// ── Setup: navegación suave en TOC ────────────────────
+function setupTOCNavigation() {
+  const contentArea = document.querySelector('.content-area');
+  if (!contentArea) return;
+
+  // Event delegation: interceptar clicks en links internos (#header)
+  contentArea.addEventListener('click', (e) => {
+    const link = e.target.closest('a[href^="#"]');
+    if (!link) return;
+
+    e.preventDefault();
+
+    const targetId = link.getAttribute('href').substring(1);
+    const targetElement = document.getElementById(targetId);
+
+    if (targetElement) {
+      // Scroll suave a la sección
+      targetElement.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start'
+      });
+
+      // Opcional: añadir highlight temporal al header
+      targetElement.classList.add('toc-target-highlight');
+      setTimeout(() => {
+        targetElement.classList.remove('toc-target-highlight');
+      }, 2000);
+    }
+  });
+}
+
 export function renderMarkdown(file) {
   const contentArea = document.getElementById('contentArea');
 
@@ -127,6 +191,9 @@ export function renderMarkdown(file) {
     document.querySelectorAll('.md-body pre code').forEach((block) => {
       hljs.highlightElement(block);
     });
+
+    // Setup TOC navigation
+    setupTOCNavigation();
 
     // Restore highlights
     if (window.restoreHighlights) {

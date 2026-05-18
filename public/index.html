@@ -595,6 +595,31 @@
     letter-spacing: 0.5px;
   }
 
+  /* ── TOC Navigation Highlight ── */
+  .md-body h1, .md-body h2, .md-body h3, .md-body h4, .md-body h5, .md-body h6 {
+    scroll-margin-top: 20px; /* Espacio para que no quede pegado arriba */
+    transition: background-color 0.3s ease, padding 0.3s ease;
+  }
+
+  .md-body h1.toc-target-highlight,
+  .md-body h2.toc-target-highlight,
+  .md-body h3.toc-target-highlight,
+  .md-body h4.toc-target-highlight,
+  .md-body h5.toc-target-highlight,
+  .md-body h6.toc-target-highlight {
+    background: rgba(88, 101, 242, 0.15);
+    padding: 8px 12px;
+    margin-left: -12px;
+    margin-right: -12px;
+    border-radius: 6px;
+    animation: tocHighlightFade 2s ease;
+  }
+
+  @keyframes tocHighlightFade {
+    0% { background: rgba(88, 101, 242, 0.3); }
+    100% { background: rgba(88, 101, 242, 0.15); }
+  }
+
   .md-body p { margin-bottom: 14px; color: var(--text-dim); }
 
   .md-body strong { color: var(--text); font-weight: 600; }
@@ -993,6 +1018,64 @@
     border-top-color: var(--accent);
     border-radius: 50%;
     animation: spin 0.6s linear infinite;
+  }
+
+  /* ── Drag & Drop Overlay (Desktop only) ── */
+  .drop-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 15, 19, 0.95);
+    backdrop-filter: blur(8px);
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.25s ease;
+  }
+
+  .drop-overlay.active {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .drop-overlay-content {
+    text-align: center;
+    padding: 40px;
+    border: 3px dashed var(--accent);
+    border-radius: 20px;
+    background: var(--surface);
+    min-width: 300px;
+    animation: dropPulse 1.5s ease-in-out infinite;
+  }
+
+  @keyframes dropPulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+  }
+
+  .drop-icon {
+    font-size: 64px;
+    margin-bottom: 16px;
+    animation: dropBounce 1s ease-in-out infinite;
+  }
+
+  @keyframes dropBounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+  }
+
+  .drop-text {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 8px;
+  }
+
+  .drop-hint {
+    font-size: 13px;
+    color: var(--text-muted);
   }
 </style>
 </head>

@@ -1,12 +1,291 @@
 # MD Viewer Mobile - Memoria de Proyecto
 
-**Versión:** 2.0.3
-**Última actualización:** 2026-05-09 12:30
+**Versión:** 2.0.4
+**Última actualización:** 2026-05-10 17:00
 **Stack:** Capacitor + Vanilla JS (ES6 Modules) + Android/iOS
 
 ---
 
 ## 📝 CHANGELOG
+
+### Sesión 2026-05-11 10:00 - 🔗 Navegación TOC (Table of Contents)
+
+### ✨ FEATURE IMPLEMENTADA:
+Navegación funcional en índices (TOC) de documentos Markdown. Ahora los links de tabla de contenidos navegan correctamente a la sección correspondiente con scroll suave.
+
+### 🎯 FUNCIONALIDAD:
+- **IDs automáticos en headers:** Todos los H1-H6 reciben un ID slugificado
+- **Navegación con scroll suave:** Click en link del TOC → scroll suave a la sección
+- **Highlight temporal:** La sección destino se resalta durante 2 segundos
+- **Funciona en desktop Y móvil:** Implementado en ambas plataformas
+
+### 🔧 IMPLEMENTACIÓN TÉCNICA:
+
+**Configuración de marked.js** (`render.js:114-139`):
+- Nueva función `slugify(text)` - convierte "## Mi Título" → "mi-titulo"
+- Custom renderer para headers: `renderer.heading = function(text, level)`
+- Cada header recibe ID automático: `<h2 id="mi-titulo">Mi Título</h2>`
+- Configuración GFM (GitHub Flavored Markdown) activada
+
+**Sistema de navegación** (`render.js:141-171`):
+- Función `setupTOCNavigation()` con event delegation
+- Intercepta clicks en links que empiezan con `#` (anchors internos)
+- `preventDefault()` para manejar navegación manualmente
+- `scrollIntoView({ behavior: 'smooth', block: 'start' })`
+- Añade clase `.toc-target-highlight` temporalmente (2s)
+
+**Estilos CSS** (`index.html:600-630`):
+- `scroll-margin-top: 20px` - espacio para que no quede pegado arriba
+- `.toc-target-highlight` - background azul semitransparente con fade-out
+- Animación `tocHighlightFade` - de 30% a 15% opacity en 2s
+- Padding y border-radius para que se vea como "pill" resaltado
+
+### 📦 Archivos modificados:
+- **MODIFICADO:** `public/modules/render.js` (+70 líneas)
+  - Función `slugify()` para generar IDs únicos
+  - Función `configureMarked()` - custom renderer de headers
+  - Función `setupTOCNavigation()` - event delegation para links internos
+  - Llamada a `setupTOCNavigation()` en `renderMarkdown()`
+- **MODIFICADO:** `public/index.html` (+35 líneas CSS)
+  - Estilos `.toc-target-highlight` con animación
+  - `scroll-margin-top` en todos los headers
+  - Keyframe `tocHighlightFade` para fade-out suave
+
+### 🚀 APK Y INSTALADOR ACTUALIZADOS:
+
+**Android APK:**
+- **Build:** 2026-05-11 10:08 (**CON TOC NAVIGATION**)
+- **Ubicación:** `android/app/build/outputs/apk/debug/app-debug.apk`
+- **Estado:** BUILD SUCCESSFUL (50s, 160 tasks)
+
+**Desktop Installer:**
+- **Build:** 2026-05-11 10:11 (**CON TOC NAVIGATION**)
+- **Ubicación:** `dist/MD Viewer Setup 2.0.0.exe`
+- **Tamaño:** 101 MB
+
+### 🧪 CÓMO PROBAR:
+
+1. **Crea un documento con TOC:**
+   ```markdown
+   # Mi Documento
+
+   ## Tabla de Contenidos
+   - [Sección 1](#sección-1)
+   - [Sección 2](#sección-2)
+   - [Conclusión](#conclusión)
+
+   ## Sección 1
+   Contenido de la sección 1...
+
+   ## Sección 2
+   Contenido de la sección 2...
+
+   ## Conclusión
+   Conclusión final...
+   ```
+
+2. **Abre el documento** en la app (móvil o desktop)
+
+3. **Click en cualquier link del TOC** → la app hace scroll suave a la sección
+
+4. **La sección destino se resalta** durante 2 segundos con background azul
+
+5. **Funciona con cualquier formato de TOC:**
+   - Links manuales: `[Link](#seccion)`
+   - TOC generados por plugins de Markdown
+   - Cualquier anchor interno que empiece con `#`
+
+### ✅ BENEFICIOS:
+- **Navegación fluida:** Scroll suave en vez de salto brusco
+- **Feedback visual:** Resaltado temporal para saber dónde llegaste
+- **Compatible con TOC automáticos:** Funciona con plugins de MD que generan TOC
+- **Funciona en ambas plataformas:** Desktop y móvil sin cambios adicionales
+- **IDs semánticos:** URLs compartibles (ej: `app://doc.md#sección-1`)
+
+---
+
+### Sesión 2026-05-11 - 🖱️ Drag & Drop para Desktop (Archivos + Carpetas)
+
+### ✨ FEATURE IMPLEMENTADA:
+Sistema completo de drag & drop para la versión desktop (Electron). Ahora puedes arrastrar **archivos Y CARPETAS** directamente a la ventana de la app para importarlos.
+
+### 🎯 FUNCIONALIDAD:
+- **Detección automática:** Solo se activa en plataforma Electron (desktop)
+- **Soporte completo de carpetas:**
+  - Arrastra carpetas completas → se importan recursivamente
+  - Preserva estructura de carpetas/subcarpetas
+  - Solo importa archivos .md, .txt y .zip (ignora el resto)
+- **Overlay visual:** Aparece cuando arrastras archivos/carpetas sobre la app
+  - Animación de pulsación y rebote
+  - Fondo blur + borde dashed azul
+  - Icono 📁 animado
+  - Texto: "Suelta archivos o carpetas aquí"
+  - Hint: "Se importarán solo archivos .md, .txt y .zip"
+- **Archivos soportados:** .md, .txt, .zip
+- **Validación:** Rechaza archivos no soportados con toast
+- **Prevención de flicker:** Usa `dragCounter` + `useCapture: true` para evitar parpadeo
+
+### 🔧 IMPLEMENTACIÓN TÉCNICA:
+
+**Nueva función helper en `import.js`** (`readDirectory(directoryEntry, basePath)`):
+- Función recursiva que lee carpetas usando FileSystemEntry API
+- Usa `createReader().readEntries()` para obtener archivos/subcarpetas
+- Lee en chunks (API limitación de Chromium)
+- Solo procesa archivos .md, .txt y .zip (filtra el resto)
+- Añade propiedad `relativePath` a cada archivo para preservar estructura
+- Recursión: `await readDirectory(entry, subPath)` para subcarpetas
+
+**Función principal en `import.js`** (`importFromDragDrop(dataTransferItems)`):
+- Recibe `DataTransferItem[]` en vez de `File[]` (necesario para detectar carpetas)
+- Usa `item.webkitGetAsEntry()` para obtener `FileSystemEntry`
+- Detecta si es archivo (`entry.isFile`) o carpeta (`entry.isDirectory`)
+- Si es carpeta → llama a `readDirectory()` recursivamente
+- Procesa archivos usando File API estándar (`.text()`, `.arrayBuffer()`)
+- Soporte completo para archivos ZIP (descomprime automáticamente)
+- Usa Electron API para escribir archivos
+- Preserva estructura con `nativeFile.relativePath`
+
+**Función de inicialización en `app.js`** (`initDragDrop()`):
+- Crea overlay DOM dinámicamente
+- Event listeners a nivel `document` (NO `.app`) con `useCapture: true`
+- `dragCounter` para tracking preciso (evita falsos `dragleave` con hijos)
+- `preventDefault()` en TODOS los eventos (dragenter, dragover, dragleave, drop)
+- `e.dataTransfer.dropEffect = 'copy'` para cursor correcto
+- Pasa `e.dataTransfer.items` a la función de import (no `files`)
+
+**Estilos CSS en `index.html`**:
+- `.drop-overlay` - Overlay fullscreen con backdrop blur
+- `.drop-overlay-content` - Caja central con border dashed
+- Animaciones CSS:
+  - `dropPulse` - Escala 1.0 → 1.05 (loop infinito)
+  - `dropBounce` - Icono sube/baja (loop infinito)
+- `opacity: 0` por defecto → `opacity: 1` con clase `.active`
+
+### 📦 Archivos modificados:
+- **MODIFICADO:** `public/modules/import.js` (+110 líneas)
+  - Añadida función helper `readDirectory(directoryEntry, basePath)` - recursiva
+  - Añadida función `importFromDragDrop(dataTransferItems)` - soporte carpetas
+  - Usa FileSystemEntry API para leer carpetas recursivamente
+- **MODIFICADO:** `public/app.js` (+70 líneas)
+  - Importado `getPlatform` y `showToast`
+  - Añadida función `initDragDrop()`
+  - Event listeners a nivel `document` con `useCapture: true`
+  - Pasa `dataTransfer.items` (NO `files`) para detectar carpetas
+  - Llamada a `initDragDrop()` solo en Electron
+- **MODIFICADO:** `public/index.html` (+60 líneas CSS)
+  - Estilos `.drop-overlay` y `.drop-overlay-content`
+  - Animaciones `dropPulse` y `dropBounce`
+
+### 🚀 CÓMO USAR:
+
+**Desktop (Electron):**
+1. Abre la app en escritorio
+2. **Arrastra archivos O carpetas** desde el explorador de archivos
+   - Archivos: .md, .txt o .zip
+   - Carpetas: se importan recursivamente (solo .md, .txt, .zip)
+3. Aparece overlay con animación
+4. Suelta archivos/carpetas → se importan automáticamente
+5. Toast confirma cantidad importada
+6. **Estructura de carpetas se preserva** automáticamente
+
+**Mobile (Capacitor):**
+- No hace nada, solo funciona el botón "Importar archivos"
+- Drag & drop no disponible en móvil (limitación del navegador)
+
+### ✅ BENEFICIOS:
+- **UX mejorada en desktop:** Mucho más rápido que abrir file picker
+- **Workflow nativo:** Arrastrar/soltar es el estándar en desktop
+- **Soporte completo de carpetas:** Arrastra toda una carpeta de documentación
+- **Preserva estructura:** Carpetas/subcarpetas se mantienen automáticamente
+- **Filtrado inteligente:** Solo importa .md, .txt y .zip (ignora imágenes, PDFs, etc.)
+- **Feedback visual inmediato:** Animaciones suaves con overlay
+- **Soporte ZIP:** Puedes arrastrar un ZIP entero (se descomprime automáticamente)
+- **No interfiere con móvil:** Código solo se ejecuta en Electron
+
+---
+
+### Sesión 2026-05-10 17:00 - 🎨 App Icon Implementation (Desktop + Mobile)
+
+### ✨ FEATURE IMPLEMENTADA:
+Añadido icono personalizado de la app tanto para la versión Desktop (Electron) como Mobile (Android).
+
+### 🎯 DISEÑO DEL ICONO:
+- **Estilo:** Dark theme optimizado para OLED (#0f0f13 background)
+- **Elementos:**
+  - Letras "M" y "D" en azul Discord (#5865f2 y #7289da)
+  - Icono de documento verde (#3ba55c) en esquina inferior derecha
+  - Borde azul (#5865f2) alrededor
+- **Formato fuente:** SVG vectorial (256x256px base, escalable)
+
+### 📦 Archivos creados:
+- **NUEVO:** `build/icon.svg` - Icono vectorial para Electron desktop
+- **NUEVO:** `resources/icon.png.svg` - Fuente SVG para mobile (256x256)
+- **NUEVO:** `resources/generate-icon.html` - Generador Canvas HTML5 (1024x1024)
+- **NUEVO:** `generate-mobile-icon.js` - Script Node.js automático para conversión
+
+### 🔧 PROCESO DE GENERACIÓN AUTOMÁTICO:
+
+**Script creado** (`generate-mobile-icon.js`):
+```javascript
+// 1. Convierte SVG a PNG (1024x1024) usando sharp
+sharp(resources/icon.png.svg)
+  .resize(1024, 1024)
+  .png()
+  .toFile(resources/icon.png)
+
+// 2. Genera todos los tamaños Android con @capacitor/assets
+execSync('npx @capacitor/assets generate --android --iconBackgroundColor "#0f0f13"')
+```
+
+### 📱 ASSETS GENERADOS (Android):
+- **Total:** 74 archivos (625.5 KB)
+- **Adaptive icons:** 6 densidades (ldpi, mdpi, hdpi, xhdpi, xxhdpi, xxxhdpi)
+  - Foreground (letras MD + documento)
+  - Background (color sólido #0f0f13)
+- **Legacy icons:** 6 densidades (ic_launcher.png)
+- **Round icons:** 6 densidades (ic_launcher_round.png)
+- **Splash screens:** 36 variantes (portrait/landscape, 6 densidades, light/dark theme)
+
+### 🚀 APK ACTUALIZADO:
+- **Build:** 2026-05-10 17:00 (**CON NUEVO ICONO**)
+- **Ubicación:** `android/app/build/outputs/apk/release/app-release.apk`
+- **Tamaño:** 3.1 MB (aumentó 200KB por assets de iconos)
+- **Estado:** BUILD SUCCESSFUL (26s, 226 tasks)
+- **Firmado:** ✅ SHA256withRSA (md-viewer-release.keystore)
+
+### 📋 INSTRUCCIONES DE USO:
+
+**Para actualizar iconos en el futuro:**
+```bash
+# Opción 1: Script automático (recomendado)
+node generate-mobile-icon.js
+
+# Opción 2: Manual
+# 1. Editar resources/icon.png.svg
+# 2. Convertir a PNG 1024x1024
+# 3. Ejecutar: npx @capacitor/assets generate --android
+```
+
+**Instalar APK con nuevo icono:**
+```bash
+# Desinstalar versión vieja
+adb uninstall com.mdviewer.app
+
+# Instalar nueva
+adb install android/app/build/outputs/apk/release/app-release.apk
+```
+
+### 🎨 DESKTOP ICON:
+- **Ubicación:** `build/icon.svg`
+- **Estado:** Creado pero no aplicado aún
+- **Pendiente:** Configurar electron-builder para usar el icono
+  - Requiere convertir SVG a ICNS (macOS) y ICO (Windows)
+  - O usar `electron-icon-builder` para generar todos los formatos
+
+### 📝 DEPENDENCIAS AÑADIDAS:
+- `sharp@^0.33.5` (devDependency) - Conversión SVG → PNG de alta calidad
+
+---
 
 ### Sesión 2026-05-09 12:30 - 🎯 ULTIMATE FIX: Highlight Menu Always Works
 

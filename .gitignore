@@ -61,3 +61,16 @@ build/icon-generator.html
 
 # User data (testing)
 AppData/
+
+# Logs de depuracion Android
+logcat_*.txt
+
+# Archivos residuales de Windows
+nul
+
+# Configuracion local de Claude
+.claude/settings.local.json
+
+# Archivos de texto temporales de prueba
+test.md
+"2026-05-07 122358.467   257-257   v.txt"

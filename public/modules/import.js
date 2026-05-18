@@ -406,3 +406,182 @@ export async function importFolder() {
     showToast('Error al importar: ' + (e.message || 'Error desconocido'), 'error');
   }
 }
+
+// Helper: leer carpeta recursivamente (FileSystemEntry API)
+async function readDirectory(directoryEntry, basePath = '') {
+  const files = [];
+
+  return new Promise((resolve) => {
+    const reader = directoryEntry.createReader();
+
+    function readEntries() {
+      reader.readEntries(async (entries) => {
+        if (entries.length === 0) {
+          resolve(files);
+          return;
+        }
+
+        for (const entry of entries) {
+          if (entry.isFile) {
+            // Solo procesar archivos .md, .txt o .zip
+            if (entry.name.endsWith('.md') || entry.name.endsWith('.txt') || entry.name.endsWith('.zip')) {
+              const file = await new Promise((resolveFile) => {
+                entry.file((f) => {
+                  // Añadir path relativo desde la carpeta arrastrada
+                  const relativePath = basePath ? `${basePath}/${entry.name}` : entry.name;
+                  f.relativePath = relativePath;
+                  resolveFile(f);
+                }, (e) => {
+                  console.error('[DEBUG] Error leyendo archivo', entry.name, ':', e);
+                  resolveFile(null);
+                });
+              });
+
+              if (file) {
+                files.push(file);
+              }
+            }
+          } else if (entry.isDirectory) {
+            // Recursión: leer subcarpeta
+            const subPath = basePath ? `${basePath}/${entry.name}` : entry.name;
+            const subFiles = await readDirectory(entry, subPath);
+            files.push(...subFiles);
+          }
+        }
+
+        // Continuar leyendo más entradas (API lee en chunks)
+        readEntries();
+      }, (e) => {
+        console.error('[DEBUG] Error leyendo directorio:', e);
+        resolve(files);
+      });
+    }
+
+    readEntries();
+  });
+}
+
+// ── Drag & Drop Import (Desktop only) ─────────────────
+export async function importFromDragDrop(dataTransferItems) {
+  try {
+    const platform = getPlatform();
+
+    // Solo funciona en Electron (desktop)
+    if (platform !== 'electron') {
+      showToast('Drag & drop solo disponible en desktop', 'error');
+      return;
+    }
+
+    if (!window.electronAPI) {
+      showToast('Electron API no disponible', 'error');
+      return;
+    }
+
+    if (!dataTransferItems || dataTransferItems.length === 0) {
+      showToast('No se encontraron archivos', 'error');
+      return;
+    }
+
+    showToast('Procesando archivos y carpetas...', '');
+
+    // Procesar DataTransferItems para obtener archivos y carpetas
+    const allFiles = [];
+
+    for (const item of dataTransferItems) {
+      if (item.kind === 'file') {
+        const entry = item.webkitGetAsEntry();
+
+        if (entry.isFile) {
+          // Es un archivo individual
+          const file = item.getAsFile();
+          if (file && (file.name.endsWith('.md') || file.name.endsWith('.txt') || file.name.endsWith('.zip'))) {
+            file.relativePath = file.name;
+            allFiles.push(file);
+          }
+        } else if (entry.isDirectory) {
+          // Es una carpeta, leer recursivamente
+          const folderFiles = await readDirectory(entry);
+          allFiles.push(...folderFiles);
+        }
+      }
+    }
+
+    if (allFiles.length === 0) {
+      showToast('No se encontraron archivos .md, .txt o .zip', 'error');
+      return;
+    }
+
+    showToast(`Importando ${allFiles.length} archivo${allFiles.length !== 1 ? 's' : ''}...`, '');
+
+    let imported = 0;
+    let errors = 0;
+
+    for (const nativeFile of allFiles) {
+      try {
+        // Verificar si es .zip
+        if (nativeFile.name.toLowerCase().endsWith('.zip')) {
+          showToast('Descomprimiendo ZIP...', '');
+
+          // Leer archivo como ArrayBuffer
+          const arrayBuffer = await nativeFile.arrayBuffer();
+          const zipResult = await processZipFile(arrayBuffer);
+          imported += zipResult.imported;
+          errors += zipResult.errors;
+          continue;
+        }
+
+        // Leer contenido del archivo como texto
+        const textContent = await nativeFile.text();
+
+        // Usar el path relativo si existe, sino solo el nombre
+        let filePath = nativeFile.relativePath || nativeFile.name;
+
+        // Asegurar extensión .md
+        if (!filePath.endsWith('.md') && !filePath.endsWith('.txt')) {
+          filePath += '.md';
+        }
+
+        // Evitar duplicados
+        let counter = 1;
+        const originalPath = filePath;
+        while (getFiles().find(f => f.path === filePath)) {
+          const parts = originalPath.split('/');
+          const lastPart = parts[parts.length - 1];
+          const base = lastPart.replace(/\.(md|txt)$/, '');
+          parts[parts.length - 1] = `${base}_${counter}.md`;
+          filePath = parts.join('/');
+          counter++;
+        }
+
+        // Crear carpetas padre si es necesario
+        await ensureParentFolders(filePath);
+
+        // Guardar archivo usando Electron API
+        await window.electronAPI.filesystem.writeFile(filePath, textContent);
+
+        addFile({
+          path: filePath,
+          name: filePath.split('/').pop(),
+          content: textContent
+        });
+
+        imported++;
+      } catch (e) {
+        console.error('[DEBUG] Error importando (drag & drop)', nativeFile.name, ':', e.message || e);
+        errors++;
+      }
+    }
+
+    await saveFileIndex();
+    await renderTree();
+
+    let msg = `✓ ${imported} archivo${imported !== 1 ? 's' : ''} importado${imported !== 1 ? 's' : ''}`;
+    if (errors > 0) msg += ` (${errors} error${errors !== 1 ? 'es' : ''})`;
+
+    showToast(msg, imported > 0 ? 'success' : 'error');
+
+  } catch (e) {
+    console.error('[DEBUG] Error al importar (drag & drop):', e.message || e);
+    showToast('Error al importar: ' + (e.message || 'Error desconocido'), 'error');
+  }
+}

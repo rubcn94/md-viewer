@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>MD Viewer Icon Generator</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 50px;
+            background: #0f0f13;
+            color: #e2e2f0;
+        }
+        canvas {
+            border: 2px solid #5865f2;
+            margin: 20px 0;
+        }
+        button {
+            background: #5865f2;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 16px;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+        button:hover {
+            background: #7289da;
+        }
+    </style>
+</head>
+<body>
+    <h1>MD Viewer Icon Generator</h1>
+    <p>Click the button to download the 1024x1024 icon</p>
+    <canvas id="canvas" width="1024" height="1024"></canvas>
+    <button onclick="downloadIcon()">Download icon.png</button>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+
+        // Background
+        ctx.fillStyle = '#0f0f13';
+        ctx.fillRect(0, 0, 1024, 1024);
+
+        // Border
+        ctx.strokeStyle = '#5865f2';
+        ctx.lineWidth = 16;
+        ctx.strokeRect(32, 32, 960, 960);
+
+        // M letter
+        ctx.fillStyle = '#5865f2';
+        ctx.font = 'bold 288px Arial';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('M', 512, 360);
+
+        // D letter
+        ctx.fillStyle = '#7289da';
+        ctx.fillText('D', 512, 640);
+
+        // Document icon
+        ctx.fillStyle = '#3ba55c';
+        ctx.globalAlpha = 0.8;
+        ctx.fillRect(720, 720, 192, 224);
+        ctx.globalAlpha = 1.0;
+
+        ctx.strokeStyle = '#0f0f13';
+        ctx.lineWidth = 8;
+        ctx.beginPath();
+        ctx.moveTo(752, 768);
+        ctx.lineTo(880, 768);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(752, 816);
+        ctx.lineTo(880, 816);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(752, 864);
+        ctx.lineTo(848, 864);
+        ctx.stroke();
+
+        function downloadIcon() {
+            canvas.toBlob(function(blob) {
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'icon.png';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                alert('Icon downloaded! Save it as resources/icon.png');
+            }, 'image/png');
+        }
+
+        console.log('Icon ready! Click the button to download.');
+    </script>
+</body>
+</html>
