@@ -2,7 +2,7 @@
   "name": "MD Viewer",
   "short_name": "MD Viewer",
   "description": "Visor de Markdown minimalista con highlights, bookmarks y más",
-  "start_url": "./",
+  "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#0f0f13",
   "theme_color": "#0f0f13",
