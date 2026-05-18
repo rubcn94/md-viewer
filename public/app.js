@@ -148,7 +148,10 @@ async function init() {
 
       pluginsReady = true;
     } else {
-      console.warn('[WARN] No platform detected (web mode)');
+      // Web mode (GitHub Pages, plain browser)
+      initializePlugins({});
+      initializeFilePicker(null);
+      pluginsReady = true;
     }
 
     // Load saved files
@@ -170,9 +173,9 @@ async function init() {
     // console.log('[DEBUG] Initializing long-press...');
     initLongPress();
 
-    // Initialize drag & drop (desktop only)
-    if (getPlatform() === 'electron') {
-      // console.log('[DEBUG] Initializing drag & drop...');
+    // Initialize drag & drop (desktop + web)
+    const currentPlatform = getPlatform();
+    if (currentPlatform === 'electron' || currentPlatform === 'web') {
       initDragDrop();
     }
 
