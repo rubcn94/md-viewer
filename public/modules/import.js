@@ -117,16 +117,89 @@ async function processZipFile(zipData) {
   }
 }
 
+// ── Web-mode helpers ──────────────────────────────────
+
+// Process an array of native File objects (web / drag-drop)
+async function _processNativeFiles(nativeFiles) {
+  let imported = 0;
+  let errors = 0;
+
+  for (const file of nativeFiles) {
+    try {
+      if (file.name.toLowerCase().endsWith('.zip')) {
+        showToast('Descomprimiendo ZIP...', '');
+        const arrayBuffer = await file.arrayBuffer();
+        const zipResult = await processZipFile(arrayBuffer);
+        imported += zipResult.imported;
+        errors += zipResult.errors;
+        continue;
+      }
+
+      const textContent = await file.text();
+      let filePath = file.relativePath || file.name;
+      if (!filePath.endsWith('.md') && !filePath.endsWith('.txt')) filePath += '.md';
+
+      let counter = 1;
+      const originalPath = filePath;
+      while (getFiles().find(f => f.path === filePath)) {
+        const parts = originalPath.split('/');
+        const last = parts[parts.length - 1];
+        const base = last.replace(/\.(md|txt)$/, '');
+        parts[parts.length - 1] = `${base}_${counter}.md`;
+        filePath = parts.join('/');
+        counter++;
+      }
+
+      addFile({ path: filePath, name: filePath.split('/').pop(), content: textContent });
+      imported++;
+    } catch (e) {
+      console.error('[DEBUG] Error importando', file.name, ':', e.message || e);
+      errors++;
+    }
+  }
+
+  await saveFileIndex();
+  await renderTree();
+
+  let msg = `✓ ${imported} archivo${imported !== 1 ? 's' : ''} importado${imported !== 1 ? 's' : ''}`;
+  if (errors > 0) msg += ` (${errors} error${errors !== 1 ? 'es' : ''})`;
+  showToast(msg, imported > 0 ? 'success' : 'error');
+}
+
+// Helper: pick files natively in a plain browser
+function pickFilesWeb() {
+  return new Promise((resolve) => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.multiple = true;
+    input.accept = '.md,.txt,.zip';
+    input.addEventListener('change', () => resolve(Array.from(input.files)));
+    input.addEventListener('cancel', () => resolve([]));
+    input.click();
+  });
+}
+
 export async function importFiles() {
   try {
     const platform = getPlatform();
 
-    // Verificar disponibilidad según plataforma
     if (platform === 'capacitor' && !FilePicker) {
       showToast('File picker no disponible', 'error');
       return;
     } else if (platform === 'electron' && !window.electronAPI) {
       showToast('Electron API no disponible', 'error');
+      return;
+    }
+
+    // ── Web mode: use native browser file input ───────
+    if (platform === 'web') {
+      showToast('Selecciona uno o varios archivos .md...', '');
+      const nativeFiles = await pickFilesWeb();
+      if (nativeFiles.length === 0) {
+        showToast('No se seleccionaron archivos', '');
+        return;
+      }
+      await _processNativeFiles(nativeFiles);
       return;
     }
 
@@ -466,13 +539,12 @@ export async function importFromDragDrop(dataTransferItems) {
   try {
     const platform = getPlatform();
 
-    // Solo funciona en Electron (desktop)
-    if (platform !== 'electron') {
-      showToast('Drag & drop solo disponible en desktop', 'error');
+    if (platform !== 'electron' && platform !== 'web') {
+      showToast('Drag & drop no disponible en esta plataforma', 'error');
       return;
     }
 
-    if (!window.electronAPI) {
+    if (platform === 'electron' && !window.electronAPI) {
       showToast('Electron API no disponible', 'error');
       return;
     }
@@ -553,17 +625,13 @@ export async function importFromDragDrop(dataTransferItems) {
           counter++;
         }
 
-        // Crear carpetas padre si es necesario
         await ensureParentFolders(filePath);
 
-        // Guardar archivo usando Electron API
-        await window.electronAPI.filesystem.writeFile(filePath, textContent);
+        if (platform === 'electron') {
+          await window.electronAPI.filesystem.writeFile(filePath, textContent);
+        }
 
-        addFile({
-          path: filePath,
-          name: filePath.split('/').pop(),
-          content: textContent
-        });
+        addFile({ path: filePath, name: filePath.split('/').pop(), content: textContent });
 
         imported++;
       } catch (e) {

@@ -3,17 +3,17 @@
 export const APP_DIR = 'md-viewer-docs';
 export let fileIndex = [];
 let Filesystem, Preferences;
-let platform = 'unknown'; // 'capacitor' or 'electron'
+let platform = 'unknown'; // 'capacitor' | 'electron' | 'web'
 
 export function initializePlugins(plugins) {
   if (plugins.Filesystem && plugins.Preferences) {
-    // Capacitor (mobile)
     Filesystem = plugins.Filesystem;
     Preferences = plugins.Preferences;
     platform = 'capacitor';
   } else if (window.electronAPI) {
-    // Electron (desktop)
     platform = 'electron';
+  } else {
+    platform = 'web';
   }
   console.log(`[Storage] Platform detected: ${platform}`);
 }
@@ -38,6 +38,9 @@ export async function loadFileIndex() {
     } else if (platform === 'capacitor') {
       const { value } = await Preferences.get({ key: 'fileIndex' });
       fileIndex = value ? JSON.parse(value) : [];
+    } else if (platform === 'web') {
+      const value = localStorage.getItem('fileIndex');
+      fileIndex = value ? JSON.parse(value) : [];
     } else {
       console.warn('[Storage] Unknown platform, using empty fileIndex');
       fileIndex = [];
@@ -56,10 +59,9 @@ export async function saveFileIndex() {
     if (platform === 'electron') {
       await window.electronAPI.storage.set('fileIndex', data);
     } else if (platform === 'capacitor') {
-      await Preferences.set({
-        key: 'fileIndex',
-        value: data
-      });
+      await Preferences.set({ key: 'fileIndex', value: data });
+    } else if (platform === 'web') {
+      localStorage.setItem('fileIndex', data);
     }
   } catch (e) {
     console.error('Error saving file index:', e);
