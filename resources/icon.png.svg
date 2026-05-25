@@ -1,0 +1,17 @@
+<svg width="256" height="256" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="256" height="256" rx="32" fill="#0f0f13"/>
+
+  <!-- Outer border -->
+  <rect x="8" y="8" width="240" height="240" rx="24" fill="none" stroke="#5865f2" stroke-width="4"/>
+
+  <!-- MD symbol -->
+  <text x="128" y="110" font-family="Arial, sans-serif" font-size="72" font-weight="bold" fill="#5865f2" text-anchor="middle">M</text>
+  <text x="128" y="180" font-family="Arial, sans-serif" font-size="72" font-weight="bold" fill="#7289da" text-anchor="middle">D</text>
+
+  <!-- Document icon -->
+  <rect x="180" y="180" width="48" height="56" rx="4" fill="#3ba55c" opacity="0.8"/>
+  <line x1="188" y1="192" x2="220" y2="192" stroke="#0f0f13" stroke-width="2"/>
+  <line x1="188" y1="204" x2="220" y2="204" stroke="#0f0f13" stroke-width="2"/>
+  <line x1="188" y1="216" x2="212" y2="216" stroke="#0f0f13" stroke-width="2"/>
+</svg>

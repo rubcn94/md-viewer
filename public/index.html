@@ -595,6 +595,31 @@
     letter-spacing: 0.5px;
   }
 
+  /* ── TOC Navigation Highlight ── */
+  .md-body h1, .md-body h2, .md-body h3, .md-body h4, .md-body h5, .md-body h6 {
+    scroll-margin-top: 20px; /* Espacio para que no quede pegado arriba */
+    transition: background-color 0.3s ease, padding 0.3s ease;
+  }
+
+  .md-body h1.toc-target-highlight,
+  .md-body h2.toc-target-highlight,
+  .md-body h3.toc-target-highlight,
+  .md-body h4.toc-target-highlight,
+  .md-body h5.toc-target-highlight,
+  .md-body h6.toc-target-highlight {
+    background: rgba(88, 101, 242, 0.15);
+    padding: 8px 12px;
+    margin-left: -12px;
+    margin-right: -12px;
+    border-radius: 6px;
+    animation: tocHighlightFade 2s ease;
+  }
+
+  @keyframes tocHighlightFade {
+    0% { background: rgba(88, 101, 242, 0.3); }
+    100% { background: rgba(88, 101, 242, 0.15); }
+  }
+
   .md-body p { margin-bottom: 14px; color: var(--text-dim); }
 
   .md-body strong { color: var(--text); font-weight: 600; }
@@ -924,6 +949,188 @@
   .toast.success { border-color: var(--green); color: var(--green); }
   .toast.error { border-color: var(--red); color: var(--red); }
 
+  /* ── Floating Save Button ── */
+  .floating-save-btn {
+    position: fixed;
+    bottom: 80px;
+    right: 20px;
+    width: 56px;
+    height: 56px;
+    background: var(--accent);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 16px rgba(88, 101, 242, 0.4);
+    cursor: pointer;
+    z-index: 1500;
+    transition: all 0.3s ease;
+    animation: fadeSlideIn 0.4s ease;
+  }
+
+  .floating-save-btn:hover {
+    transform: scale(1.1);
+    box-shadow: 0 6px 24px rgba(88, 101, 242, 0.6);
+  }
+
+  .floating-save-btn:active {
+    transform: scale(0.95);
+  }
+
+  .floating-save-btn .save-count {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    background: var(--green);
+    color: white;
+    font-size: 10px;
+    font-weight: 700;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid var(--bg);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  }
+
+  @keyframes fadeSlideIn {
+    from {
+      opacity: 0;
+      transform: translateY(20px) scale(0.8);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+
+  @media (max-width: 768px) {
+    .floating-save-btn {
+      bottom: 60px;
+      right: 16px;
+      width: 52px;
+      height: 52px;
+    }
+  }
+
+  /* ── Update Banner ── */
+  .update-banner {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    box-shadow: 0 4px 20px rgba(102, 126, 234, 0.4);
+    z-index: 9999;
+    transform: translateY(-100%);
+    transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .update-banner.visible {
+    transform: translateY(0);
+  }
+
+  .update-banner-content {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 16px 20px;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  .update-icon {
+    font-size: 32px;
+    animation: bounce 2s infinite;
+  }
+
+  @keyframes bounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-5px); }
+  }
+
+  .update-info {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .update-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: white;
+    margin-bottom: 4px;
+  }
+
+  .update-desc {
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.85);
+    line-height: 1.4;
+  }
+
+  .update-actions {
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+
+  .btn-update-download,
+  .btn-update-dismiss {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .btn-update-download {
+    background: white;
+    color: #667eea;
+  }
+
+  .btn-update-download:hover {
+    background: #f0f0f0;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  }
+
+  .btn-update-dismiss {
+    background: rgba(255, 255, 255, 0.15);
+    color: white;
+    backdrop-filter: blur(10px);
+  }
+
+  .btn-update-dismiss:hover {
+    background: rgba(255, 255, 255, 0.25);
+  }
+
+  @media (max-width: 640px) {
+    .update-banner-content {
+      flex-direction: column;
+      text-align: center;
+      padding: 14px 16px;
+    }
+
+    .update-actions {
+      width: 100%;
+      flex-direction: column;
+    }
+
+    .btn-update-download,
+    .btn-update-dismiss {
+      width: 100%;
+    }
+
+    .update-icon {
+      font-size: 28px;
+    }
+  }
+
   /* ── Sidebar overlay (mobile) ── */
   .sidebar-overlay {
     display: none;
@@ -993,6 +1200,64 @@
     border-top-color: var(--accent);
     border-radius: 50%;
     animation: spin 0.6s linear infinite;
+  }
+
+  /* ── Drag & Drop Overlay (Desktop only) ── */
+  .drop-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 15, 19, 0.95);
+    backdrop-filter: blur(8px);
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.25s ease;
+  }
+
+  .drop-overlay.active {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .drop-overlay-content {
+    text-align: center;
+    padding: 40px;
+    border: 3px dashed var(--accent);
+    border-radius: 20px;
+    background: var(--surface);
+    min-width: 300px;
+    animation: dropPulse 1.5s ease-in-out infinite;
+  }
+
+  @keyframes dropPulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+  }
+
+  .drop-icon {
+    font-size: 64px;
+    margin-bottom: 16px;
+    animation: dropBounce 1s ease-in-out infinite;
+  }
+
+  @keyframes dropBounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+  }
+
+  .drop-text {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 8px;
+  }
+
+  .drop-hint {
+    font-size: 13px;
+    color: var(--text-muted);
   }
 </style>
 </head>

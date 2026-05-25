@@ -98,6 +98,9 @@ export function initHighlightSystem() {
   // MAIN MAGIC: Listen to selection changes (works perfectly on mobile!)
   document.addEventListener('selectionchange', handleSelectionChange);
 
+  // Show floating save button if there are highlights
+  showSaveButtonIfNeeded();
+
   // Close menu when clicking outside (but not when selecting text!)
   document.removeEventListener('mousedown', hideFloatingMenuIfOutside);
   document.removeEventListener('touchstart', hideFloatingMenuIfOutside);
@@ -517,6 +520,9 @@ async function applyHighlight(color) {
 
         await updateFileMetadata(filePath, { highlights });
         showToast('Texto subrayado', 'success');
+
+        // Show floating save button
+        showSaveButtonIfNeeded();
       }
     }
   } catch (e) {
@@ -615,12 +621,77 @@ export async function removeHighlight(highlightElement) {
   parent.removeChild(highlightElement);
 
   showToast('Subrayado eliminado', 'success');
+
+  // Update floating save button
+  showSaveButtonIfNeeded();
 }
 
 // Helper to get current file path from DOM
 function getCurrentFilePath() {
   const activeTab = document.querySelector('.tab.active');
   return activeTab?.dataset?.path || null;
+}
+
+// ── Save File with Embedded Highlights ────────────────────
+export async function saveFileWithEmbeddedHighlights(filePath) {
+  const file = getFile(filePath);
+  if (!file) {
+    showToast('Error: Archivo no encontrado', 'error');
+    return;
+  }
+
+  if (!file.highlights || file.highlights.length === 0) {
+    showToast('No hay subrayados para guardar', 'error');
+    return;
+  }
+
+  try {
+    const { saveFileWithHighlights } = await import('./storage.js');
+    await saveFileWithHighlights(filePath);
+    showToast(`✓ Archivo guardado con ${file.highlights.length} subrayados`, 'success');
+  } catch (e) {
+    console.error('Error saving file with highlights:', e);
+    showToast('Error al guardar: ' + (e.message || e), 'error');
+  }
+}
+
+// ── Floating Save Button ────────────────────────────────
+function showSaveButtonIfNeeded() {
+  const filePath = getCurrentFilePath();
+  if (!filePath) return;
+
+  const file = getFile(filePath);
+  if (!file || !file.highlights || file.highlights.length === 0) {
+    // Remove button if exists
+    const existingBtn = document.getElementById('floating-save-btn');
+    if (existingBtn) existingBtn.remove();
+    return;
+  }
+
+  // Check if button already exists
+  let saveBtn = document.getElementById('floating-save-btn');
+  if (saveBtn) {
+    // Update count
+    saveBtn.querySelector('.save-count').textContent = file.highlights.length;
+    return;
+  }
+
+  // Create floating save button
+  saveBtn = document.createElement('button');
+  saveBtn.id = 'floating-save-btn';
+  saveBtn.className = 'floating-save-btn';
+  saveBtn.innerHTML = `
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+      <polyline points="17 21 17 13 7 13 7 21"/>
+      <polyline points="7 3 7 8 15 8"/>
+    </svg>
+    <span class="save-count">${file.highlights.length}</span>
+  `;
+  saveBtn.title = 'Guardar archivo con subrayados embebidos';
+  saveBtn.onclick = () => saveFileWithEmbeddedHighlights(filePath);
+
+  document.body.appendChild(saveBtn);
 }
 
 export function restoreHighlights(file) {

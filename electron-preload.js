@@ -22,6 +22,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
     pickFolder: () => ipcRenderer.invoke('filePicker:pickFolder')
   },
 
+  // Shell (para abrir URLs externas)
+  shell: {
+    openExternal: (url) => ipcRenderer.invoke('shell:openExternal', url)
+  },
+
   // Plataforma
   platform: 'electron'
 });

@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, dialog } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, shell } = require('electron');
 const { autoUpdater } = require('electron-updater');
 const path = require('path');
 const fs = require('fs').promises;
@@ -199,6 +199,21 @@ ipcMain.handle('fs:deleteDir', async (event, relativePath) => {
     return { success: true };
   } catch (error) {
     console.error('Error deleting directory:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+// ========================================
+// IPC Handlers - Shell
+// ========================================
+
+// Abrir URL externa (actualizaciones, links, etc.)
+ipcMain.handle('shell:openExternal', async (event, url) => {
+  try {
+    await shell.openExternal(url);
+    return { success: true };
+  } catch (error) {
+    console.error('Error opening external URL:', error);
     return { success: false, error: error.message };
   }
 });

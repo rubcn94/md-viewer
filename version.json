@@ -1,0 +1,15 @@
+{
+  "version": "2.0.5",
+  "description": "Guardar highlights embebidos + Fix HTML rendering",
+  "releaseDate": "2026-05-25",
+  "downloadUrls": {
+    "windows": "https://github.com/YOUR-USERNAME/md-viewer/releases/download/v2.0.5/MD.Viewer.Setup.2.0.5.exe",
+    "android": "https://github.com/YOUR-USERNAME/md-viewer/releases/download/v2.0.5/md-viewer-v2.0.5.apk"
+  },
+  "changelog": [
+    "✨ Guardar highlights embebidos en archivo .md",
+    "✨ Botón flotante para exportar highlights",
+    "🐛 Fix: HTML rendering (diagramas, <br>, etc.)",
+    "🎨 Mejoras en UI del sistema de highlights"
+  ]
+}

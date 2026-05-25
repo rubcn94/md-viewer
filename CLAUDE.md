@@ -1,674 +1,131 @@
 # MD Viewer Mobile - Memoria de Proyecto
 
-**Versión:** 2.0.3
-**Última actualización:** 2026-05-09 12:30
-**Stack:** Capacitor + Vanilla JS (ES6 Modules) + Android/iOS
+**Versión:** 2.0.5 | **Stack:** Capacitor + Vanilla JS (ES6 Modules) + Android/iOS
 
 ---
 
-## 📝 CHANGELOG
+## 📝 CHANGELOG RECIENTE
 
-### Sesión 2026-05-09 12:30 - 🎯 ULTIMATE FIX: Highlight Menu Always Works
+### 2026-05-25 - Auto-Update System + Save Highlights + HTML Fix
+- **Auto-Update System:** Banner de actualización automático
+  - Módulo `updater.js` con version checking desde GitHub
+  - Banner animado con gradient y bounce effect
+  - Verifica updates cada 6 horas automáticamente
+  - Descarga directa desde releases (Android APK / Windows installer)
+  - Compatible Electron + Capacitor
+- **Guardar highlights embebidos:** Botón flotante para guardar subrayados en el archivo .md
+  - Función `saveFileWithHighlights()` en `storage.js`
+  - Botón flotante con contador de highlights
+  - Animación fadeSlideIn suave
+- **Fix HTML rendering:** `marked.js` ahora permite HTML embebido
+  - `sanitize: false` para soportar diagramas HTML
+  - Renders `<br>`, `<div>`, etc. correctamente
 
-### 🐛 PROBLEMA REPORTADO:
-Usuario reportó que **el menú de colores aparece pero no aplica el subrayado** cuando amplías la selección. El problema NO era que el menú desapareciera, sino que el **click en los colores no hacía nada**.
+### 2026-05-11 - TOC Navigation + Drag & Drop Desktop
+- **TOC Navigation:** Links internos con scroll suave y highlight temporal (2s)
+  - Slugify automático de headers → IDs únicos
+  - Funciona con TOC manuales y generados
+- **Drag & Drop Desktop:** Arrastra archivos/carpetas en Electron
+  - Soporte carpetas recursivas con FileSystemEntry API
+  - Overlay visual con animación
+  - Solo .md, .txt, .zip
 
-### 🔍 ROOT CAUSE:
-1. **Debounce demasiado alto (300ms):** Si amplías la selección, el timeout se reseteaba constantemente y `currentSelection` quedaba desactualizado
-2. **Selección cacheada obsoleta:** La función `applyHighlight()` usaba `currentSelection` (snapshot viejo), no la selección ACTUAL en el momento del click
-3. **Resultado:** Click en color → `currentSelection` apunta al texto viejo → no se subraya el texto que realmente seleccionaste
+### 2026-05-10 - App Icon
+- Icono personalizado dark theme (MD + documento verde)
+- Script automático: `node generate-mobile-icon.js`
+- 74 assets Android (adaptive icons, splash screens)
 
-### ✅ SOLUCIÓN IMPLEMENTADA:
+### 2026-05-09 - Highlight System Fixes
+- **ULTIMATE FIX:** Debounce 100ms + lectura directa de selección
+- Multi-word highlighting con `extractContents()` + `insertNode()`
+- Long-press para eliminar highlights (500ms)
+- Menú flotante con 4 colores
 
-1. **Debounce reducido a 100ms** (`readingProgress.js:235`)
-   - Antes: 300ms (demasiado lento, causaba que el timeout nunca se completara)
-   - Ahora: 100ms (balance perfecto entre responsividad y estabilidad)
-   - Permite que el menú aparezca rápidamente mientras extiendes la selección
-
-2. **Lectura directa de selección en `applyHighlight()`** (`readingProgress.js:458-532`)
-   - **ANTES:** Usaba `currentSelection` cacheado (desactualizado)
-   - **AHORA:** Lee directamente `window.getSelection()` en el momento del click
-   - **Beneficio:** Siempre captura el texto EXACTO que seleccionaste, incluso si extendiste la selección después del debounce
-
-3. **Validaciones robustas agregadas:**
-   - Verifica que `selection.rangeCount > 0`
-   - Verifica que `selectedText.length >= 1`
-   - Verifica que selección esté dentro de `.md-body`
-   - Mensajes de error informativos con toast
-
-4. **Menú flotante optimizado** (`readingProgress.js:322-412`)
-   - Si ya existe y el modo no cambió → solo actualiza posición (sin recrear)
-   - Asegura que `visible` class se mantenga aunque estés ampliando selección
-   - Menos parpadeos, mejor UX
-
-### 📦 Archivos modificados:
-- **MODIFICADO:** `public/modules/readingProgress.js` (680 líneas)
-  - `handleSelectionChange()` - debounce reducido a 100ms
-  - `applyHighlight()` - lee selección directa en vez de cache
-  - `showFloatingMenu()` - optimizado para no recrear innecesariamente
-  - `hideFloatingMenuIfOutside()` - comentarios mejorados
-
-### 🚀 APK actualizado:
-- **Build:** 2026-05-09 12:30 (**ULTIMATE FIX - MENU ALWAYS WORKS**)
-- **Ubicación:** `android/app/build/outputs/apk/debug/app-debug.apk`
-- **Estado:** BUILD SUCCESSFUL (52s, 160 tasks)
-
-### 🧪 INSTRUCCIONES DE PRUEBA:
-
-**IMPORTANTE: Desinstalar app vieja primero**
-```bash
-# En el móvil: Ajustes → Apps → MD Viewer → Desinstalar
-# O con ADB:
-adb uninstall com.mdviewer.app
-```
-
-**Instalar APK nuevo:**
-```bash
-adb install C:\Users\cra\Proyectos\md-viewer\android\app\build\outputs\apk\debug\app-debug.apk
-```
-
-**Probar subrayado con extensión de selección:**
-1. Abre un archivo MD
-2. **Mantén pulsado** en medio de un párrafo
-3. **Arrastra lentamente** hacia abajo → selecciona 2-3 palabras
-4. **SIN SOLTAR, sigue arrastrando** → extiende a 5-10 palabras
-5. **Suelta** → aparece menú flotante con 4 colores
-6. **Click en cualquier color** → TODO el texto se subraya correctamente
-7. **Repetir pero arrastrando más rápido** → debe funcionar igual
-
-**Debe funcionar con:**
-- Selección rápida y lenta (velocidad de arrastre no importa)
-- Extender selección mientras menú ya está visible
-- Selecciones cortas (2 palabras) y largas (párrafo completo)
-- Texto con formato: "esto es **bold** y *italic* y normal"
-- Múltiples selecciones consecutivas sin cerrar/abrir archivo
-
-**Verificar que NO crashee:**
-- Si seleccionas y deseleccionas rápidamente
-- Si clicks en color antes de que aparezca el menú
-- Si extiendes selección fuera de `.md-body`
+### 2026-05-07 - UI Improvements + Critical Fixes
+- Color picker 🎨, sticky header, eliminado botón Raw
+- Fix importación carpetas: `ensureParentFolders()`
+- Fix doble inicialización `longPress.js`
 
 ---
 
-### Sesión 2026-05-08 22:00 - 🔥 CRITICAL FIX: Android Text Selection Unblocked
-
-### 🐛 PROBLEMA REAL:
-Usuario reportó que **solo podía subrayar una palabra**, el fix anterior no funcionó.
-
-### 🔍 ROOT CAUSE VERDADERO:
-La función `preventDefaultMenu()` estaba bloqueando **completamente** el evento `contextmenu` de Android, lo cual impedía que el sistema nativo manejara la selección multi-palabra.
-
-En Android:
-- Mantener pulsado → inicia selección
-- Arrastrar → extiende selección a múltiples palabras
-- **Si bloqueas `contextmenu` globalmente → rompes la selección multi-palabra**
-
-### ✅ SOLUCIÓN FINAL:
-
-1. **Bloqueo selectivo de contextmenu** (`readingProgress.js:87-97`)
-   - Solo prevenir `contextmenu` en highlights **existentes**
-   - Permitir que Android maneje selección de texto normal
-   - Código anterior: bloqueaba TODO con `preventDefaultMenu`
-   - Código nuevo: verifica `event.target.closest('.highlight')` antes de bloquear
-
-2. **Menú flotante no se cierra al seleccionar** (`readingProgress.js:99-104`)
-   - Antes: se cerraba con cualquier touch/click
-   - Ahora: solo se cierra si click fuera de `.md-body` Y fuera del menú
-   - Permite seleccionar múltiples palabras sin que desaparezca el menú
-
-3. **Eliminada función obsoleta** (`preventDefaultMenu`)
-   - Ya no se usa, el bloqueo es inline y condicional
-
-### 📦 Archivos modificados:
-- **MODIFICADO:** `public/modules/readingProgress.js` (553 líneas)
-  - `initHighlightSystem()` - contextmenu handler condicional inline
-  - `hideFloatingMenuIfOutside()` - nueva función que respeta .md-body
-  - `hideFloatingMenu()` - separada en dos funciones (condicional y forzada)
-  - Eliminada `preventDefaultMenu()` (ya no necesaria)
-
-### 🚀 APK actualizado:
-- **Build:** 2026-05-08 22:00 (**REAL FIX ANDROID SELECTION**)
-- **Ubicación:** `android/app/build/outputs/apk/debug/app-debug.apk`
-- **Estado:** BUILD SUCCESSFUL (14s, 160 tasks)
-
-### 🧪 INSTRUCCIONES DE PRUEBA:
-
-**IMPORTANTE: Desinstalar app vieja primero**
-```bash
-# En el móvil: Ajustes → Apps → MD Viewer → Desinstalar
-# O con ADB:
-adb uninstall com.mdviewer.app
-```
-
-**Instalar APK nuevo:**
-```bash
-adb install C:\Users\cra\Proyectos\md-viewer\android\app\build\outputs\apk\debug\app-debug.apk
-```
-
-**Probar selección multi-palabra:**
-1. Abre un archivo MD
-2. **Mantén pulsado** en medio de un párrafo
-3. **Arrastra** hacia arriba o abajo → debería seleccionar múltiples palabras
-4. Suelta → aparece menú flotante con colores
-5. Click en color → **todo el texto seleccionado** se subraya
-
-**Debe funcionar con:**
-- Selección de 2-3 palabras simples
-- Selección de frases completas (5-10 palabras)
-- Texto que cruza negritas: "esto es **bold** y normal"
-- Texto que cruza cursivas: "esto es *italic* y normal"
-- Párrafos completos
-
----
-
-### Sesión 2026-05-08 21:45 - 🐛 FIX: Multi-Word Highlighting + Long-Press Delete
-
-### 🛠️ PROBLEMA RESUELTO:
-El sistema de subrayado solo permitía subrayar **una palabra a la vez**, fallando con selecciones de múltiples palabras o texto que cruzaba elementos HTML (negritas, cursivas, etc.).
-
-### 🔍 ROOT CAUSE:
-- `range.surroundContents()` **falla cuando la selección cruza múltiples nodos DOM**
-- Ejemplo: si seleccionas "texto en **negrita** normal", hay 3 nodos diferentes
-- El método `surroundContents()` lanza excepción en estos casos
-
-### ✅ SOLUCIÓN IMPLEMENTADA:
-
-1. **Multi-word highlighting arreglado** (`readingProgress.js:309-352`)
-   - Reemplazado `surroundContents()` por `extractContents()` + `insertNode()`
-   - Ahora funciona con selecciones complejas que cruzan múltiples nodos
-   - Preserva el formato interno (negritas, cursivas, links, etc.)
-   - Cada highlight tiene ID único (`data-highlight-id`) para tracking preciso
-
-2. **Long-press para eliminar highlights** (`readingProgress.js:76-188`)
-   - Añadida función `setupHighlightLongPress()`
-   - Detecta touch y mouse events en elementos `.highlight`
-   - Mantener pulsado 500ms → aparece menú contextual "Eliminar subrayado"
-   - Feedback háptico (vibración) al activar menú
-   - Compatible con móvil y desktop
-
-3. **Sistema de eliminación mejorado** (`readingProgress.js:487-508`)
-   - `removeHighlight()` actualizado para usar ID único
-   - Preserva nodos internos al eliminar (no pierde formato)
-   - Elimina del metadata automáticamente
-
-4. **Restauración de highlights mejorada** (`readingProgress.js:516-556`)
-   - `restoreHighlights()` usa `extractContents()` + `insertNode()`
-   - Restaura ID único al reabrir archivo
-   - Compatible con highlights multi-palabra
-
-### 📦 Archivos modificados:
-- **MODIFICADO:** `public/modules/readingProgress.js` (558 líneas)
-  - `applyHighlight()` - método robusto para selecciones complejas
-  - `setupHighlightLongPress()` - detección de long-press en highlights
-  - `handleHighlightTouchStart()` / `handleHighlightMouseDown()` - eventos táctiles
-  - `showHighlightDeleteMenu()` - menú contextual para eliminar
-  - `removeHighlight()` - eliminación basada en ID único
-  - `changeHighlightColor()` - cambio de color basado en ID
-  - `restoreHighlights()` - restauración robusta con ID
-
-### 🚀 APK actualizado:
-- **Build:** 2026-05-08 21:45 (**CON FIX MULTI-WORD**)
-- **Ubicación:** `android/app/build/outputs/apk/debug/app-debug.apk`
-- **Estado:** BUILD SUCCESSFUL (45s, 160 tasks)
-
-### 🧪 CÓMO PROBAR:
-
-**Subrayar múltiples palabras:**
-1. Abre un archivo MD
-2. Selecciona **varias palabras** (incluye texto con negritas, cursivas, etc.)
-3. Aparece menú flotante con colores
-4. Click en color → todo el texto se subraya correctamente
-
-**Eliminar subrayado con long-press:**
-1. Mantén pulsado 500ms sobre un texto subrayado
-2. Vibración + aparece menú "Eliminar subrayado"
-3. Click "Eliminar" → se elimina instantáneamente
-4. Toast confirma "Subrayado eliminado"
-
-**Verificar persistencia:**
-1. Subraya varios bloques de texto (1 palabra, 3 palabras, párrafo completo)
-2. Cierra archivo
-3. Vuelve a abrirlo → todos los highlights se restauran correctamente
-
----
-
-### Sesión 2026-05-07 20:30 - ✨ UI Improvements: Sticky Header, Color Picker & Un-Highlight
-
-### 🎨 MEJORAS IMPLEMENTADAS:
-1. **Color Picker** - Botón 🎨 con menú dropdown para elegir colores de subrayado
-   - 5 colores disponibles: Amarillo, Verde, Azul, Rosa, Morado
-   - Menú flotante con animación
-   - Cierre automático al seleccionar color o click fuera
-
-2. **Un-Highlight (desubrayar)** - Click en subrayado para eliminarlo
-   - Subrayados ahora son clickables
-   - Muestra tooltip "Click para eliminar"
-   - Elimina del metadata automáticamente
-
-3. **Header Sticky** - Header del documento permanece fijo al hacer scroll
-   - `position: sticky` con `z-index: 100`
-   - Background opaco para no mostrar contenido debajo
-   - Botones siempre visibles mientras lees
-
-4. **Espacio Optimizado** - Eliminados botones innecesarios
-   - **Eliminado:** Botón "Raw" (usuario no lo entendía)
-   - **Eliminado:** Botón "×" cerrar (espacio mejor usado)
-   - **Resultado:** Más espacio para mostrar título completo
-
-### 📦 Archivos modificados:
-- **MODIFICADO:** `public/modules/render.js` (líneas 115-128)
-  - Header redesigned con `.doc-actions` container
-  - Color picker HTML integrado
-  - Eliminados botones Raw y Close
-
-- **MODIFICADO:** `public/modules/readingProgress.js` (líneas 150-208)
-  - Añadida función `toggleColorPicker(event)`
-  - Añadida función `removeHighlight(highlightElement)`
-  - Actualizada función `setHighlightColor()` para cerrar menu
-  - Highlights ahora tienen event listener de click
-  - Cursor pointer y tooltip en highlights
-
-- **MODIFICADO:** `public/app.js` (líneas 11-20, 136-137)
-  - Importadas nuevas funciones: `toggleColorPicker`, `removeHighlight`
-  - Expuestas a `window` para onclick handlers
-
-- **MODIFICADO:** `public/index.html` (CSS líneas 281-368)
-  - `.doc-header` ahora sticky con background
-  - Añadido `.doc-actions` flexbox container
-  - Añadido `.color-picker-container` posicionamiento relativo
-  - Añadido `.btn-color-picker` estilos
-  - Añadido `.color-picker-menu` menú flotante
-  - Añadido `.color-option` botones de color (28x28px)
-
-### 🚀 APK actualizado:
-- **Build:** 2026-05-07 20:30 (**CON UI IMPROVEMENTS**)
-- **Ubicación:** `android/app/build/outputs/apk/debug/app-debug.apk`
-- **Estado:** BUILD SUCCESSFUL (1s)
-
-### 📋 CÓMO USAR LAS NUEVAS FUNCIONES:
-
-**Color Picker:**
-1. Abre un archivo MD
-2. Click en 🎨 → se abre menú con 5 colores
-3. Selecciona color → se cierra menú automáticamente
-4. Activa modo subrayado (🖍️) y selecciona texto
-5. El texto se subraya con el color elegido
-
-**Eliminar Subrayado:**
-1. Click en cualquier texto subrayado
-2. Se elimina instantáneamente
-3. Toast confirma "Subrayado eliminado"
-
-**Header Sticky:**
-1. Abre un archivo largo
-2. Scroll hacia abajo
-3. El header se queda fijo en la parte superior
-4. Botones (○, 📍, 🖍️, 🎨) siempre accesibles
-
-### 🧪 INSTRUCCIONES DE PRUEBA:
-1. **Desinstalar** app vieja completamente
-2. **Instalar** APK nuevo (20:30):
-   ```
-   androidppuild\outputspk\debugpp-debug.apk
-   ```
-3. **Probar funciones:**
-   - Abrir archivo largo y verificar header sticky
-   - Cambiar color de subrayado con 🎨
-   - Subrayar texto en varios colores
-   - Click en subrayado para eliminarlo
-   - Verificar que título se ve completo (no truncado como "read...")
-
----
-
-### Sesión 2026-05-07 19:00 - 🐛 FIX: Importación de Carpetas + ADB Setup
-
-### 🛠️ ARREGLADO:
-- **Error "Parent folder doesn't exist"** al importar archivos con estructura de carpetas
-- **Error "Directory exists"** que llenaba logs innecesariamente
-- **Console log "undefined"** en errores de importación
-
-### 🔍 ROOT CAUSE:
-El código intentaba escribir archivos (ej: `carpeta/subcarpeta/archivo.md`) sin crear primero las carpetas padre. El plugin `@capacitor/filesystem` requiere que todas las carpetas existan antes de escribir archivos.
-
-### ✅ SOLUCIÓN IMPLEMENTADA:
-1. **Nueva función `ensureParentFolders()`** en `import.js:16-36`
-   - Extrae la estructura de carpetas del filePath
-   - Crea cada carpeta recursivamente antes de escribir el archivo
-   - Maneja silenciosamente el error "Directory exists"
-
-2. **Mejorado manejo de errores:**
-   - Usa `e.message || e` para evitar mostrar "undefined"
-   - Logs más informativos con el nombre del archivo que falló
-
-### 📦 Archivos modificados:
-- **MODIFICADO:** `public/modules/import.js` (254 líneas)
-  - Añadida función helper `ensureParentFolders()`
-  - Integrada en `importFiles()` línea 112
-  - Integrada en `importFolder()` línea 220
-
-### 🚀 APK CORREGIDO:
-- **Build:** 2026-05-07 19:00 (**CON FIX IMPORTACIÓN**)
-- **Ubicación:** `android/app/build/outputs/apk/debug/app-debug.apk`
-- **Estado:** BUILD SUCCESSFUL (167 tasks, 13s)
-
-### 🔧 BONUS: ADB Instalado
-- **Instalado:** Android Platform Tools para Windows
-- **Ubicación:** `C:/Users/cra/platform-tools/adb.exe`
-- **Añadido al PATH:** Permanente para sesión de usuario
-- **Uso:** Ahora puedo leer logs de logcat en tiempo real
-
-### 📋 CÓMO USAR:
-```bash
-# Ver errores en tiempo real
-adb logcat -v time *:E
-
-# Filtrar solo app
-adb logcat -v time | grep "Capacitor"
-
-# Guardar logs
-adb logcat -d > logs.txt
-```
-
-### 🧪 INSTRUCCIONES DE PRUEBA:
-1. **Desinstalar** app vieja
-2. **Instalar** APK nuevo (19:00):
-   ```
-   android\app\build\outputs\apk\debug\app-debug.apk
-   ```
-3. **Probar importación** con archivos en carpetas/subcarpetas
-4. **Verificar:** Ya no debe aparecer error "Parent folder doesn't exist"
-
----
-
-### Sesión 2026-05-07 18:15 - 🔥 CRITICAL BUG FIX
-
-### 🐛 BUG CRÍTICO ENCONTRADO:
-- **Root cause:** Doble inicialización en `longPress.js`
-- **Síntoma:** Crash loop continuo, logcat no para de ejecutarse
-- **Efecto:** App completamente rota, botones no aparecen, errores en import
-
-### 🔍 DIAGNÓSTICO:
-El módulo `longPress.js` tenía **dos puntos de inicialización**:
-1. **Líneas 162-166:** Auto-inicialización al cargar el módulo
-2. **Líneas 6-10:** Función `initLongPress()` exportada que añade OTRO listener
-3. **app.js línea 84:** Llamaba a `initLongPress()`
-
-**Resultado:** `setupLongPressListeners()` se ejecutaba múltiples veces, adjuntando event listeners duplicados, causando un loop infinito de eventos.
-
-### ✅ SOLUCIÓN:
-1. **Eliminado:** Auto-inicialización al final de `longPress.js` (líneas 162-166)
-2. **Corregido:** `initLongPress()` ahora usa `{ once: true }` para evitar duplicados
-3. **Verificado:** Solo una llamada desde `app.js`
-
-**Código corregido:**
-```javascript
-export function initLongPress() {
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', setupLongPressListeners, { once: true });
-  } else {
-    setupLongPressListeners();
-  }
-}
-```
-
-### 📦 Archivos modificados:
-- **MODIFICADO:** `public/modules/longPress.js` - Eliminada doble inicialización
-
-### 🚀 APK CORREGIDO:
-- **Build:** 2026-05-07 18:15 (**CON FIX CRÍTICO**)
-- **Ubicación:** `android/app/build/outputs/apk/debug/app-debug.apk`
-- **Estado:** BUILD SUCCESSFUL (167 tasks)
-
-### 📋 INSTRUCCIONES DE INSTALACIÓN:
-1. **Desinstalar** app vieja completamente
-2. **Instalar** APK nuevo (18:15):
-   ```
-   android\app\build\outputs\apk\debug\app-debug.apk
-   ```
-3. **Abrir** app y verificar que funciona correctamente
-4. **Debería funcionar:** Botón importar visible, sin crash loops
-
----
-
-### Sesión 2026-05-07 17:40 - Debugging & Error Handling
-
-### 🐛 PROBLEMA REPORTADO:
-- Usuario instaló APK pero NO aparece botón "Importar archivos"
-- Sale error al intentar importar
-- App parece completamente rota
-
-### ✅ SOLUCIÓN IMPLEMENTADA:
-1. **Error handlers globales** - Capturan errores JS y los muestran en pantalla
-2. **Logging detallado** - Console logs en cada paso de init()
-3. **Página de debug** - `debug.html` para probar módulos individualmente
-4. **Documentación de debugging** - `DEBUGGING.md` con instrucciones paso a paso
-
-### 📦 Archivos añadidos:
-- **NUEVO:** `public/debug.html` - Página de diagnóstico
-- **NUEVO:** `DEBUGGING.md` - Guía completa de debugging
-- **MODIFICADO:** `public/app.js` - Error handling en init()
-- **MODIFICADO:** `public/index.html` - Global error handlers
-
-### 🚀 APK actualizado:
-- **Build:** 2026-05-07 10:40 (con debugging)
-- **Ubicación:** `android/app/build/outputs/apk/debug/app-debug.apk`
-- **Cambios:** Error handling + logging detallado
-
-### 📋 PRÓXIMOS PASOS (usuario debe hacer):
-1. Desinstalar app vieja
-2. Instalar APK nuevo (10:40)
-3. Abrir app y ver si aparece error rojo en pantalla
-4. O usar Chrome DevTools (`chrome://inspect`) para ver errores
-5. Mandar captura de pantalla del error
-6. Con el error exacto, podremos arreglarlo
-
----
-
-### Sesión 2026-05-07 17:30 - Implementación Inicial
-
-### ✅ Implementado en esta sesión:
-1. **Sistema de lectura (ticks)** - Marcar archivos como leídos
-2. **Sistema de bookmarks** - Guardar posición de lectura
-3. **Sistema de highlights** - Subrayar texto importante
-4. **Long-press delete** - Eliminar archivos/carpetas con pulsación larga
-5. **Árbol de carpetas recursivo** - Soporte múltiples niveles
-6. **Importación de carpetas** - Preserva estructura completa
-7. **Metadata storage** - Extendido modelo de datos con read/bookmark/highlights
-
-### 🐛 Bugs corregidos:
-- Funciones async sin await → causaba que metadata no se guardara
-- Importación de archivos fallaba en móvil → corregido async/await
-- APK no reflejaba cambios → usuario tenía APK viejo instalado (solución: desinstalar + reinstalar)
-- Build cache causaba problemas → agregado `./gradlew clean` antes de compile
-
-### 📦 Archivos creados/modificados:
-- **NUEVO:** `public/modules/readingProgress.js` (165 líneas)
-- **NUEVO:** `public/modules/longPress.js` (145 líneas)
-- **NUEVO:** `CLAUDE.md` (este archivo - memoria del proyecto)
-- **NUEVO:** `build-android.bat` (script automático de build)
-- **NUEVO:** `INSTRUCCIONES_INSTALACION.md` (guía de instalación)
-- **MODIFICADO:** `public/modules/storage.js` - añadido updateFileMetadata()
-- **MODIFICADO:** `public/modules/render.js` - árbol recursivo + indicadores
-- **MODIFICADO:** `public/modules/import.js` - mejorada importFolder()
-- **MODIFICADO:** `public/app.js` - integración nuevos módulos
-- **MODIFICADO:** `public/index.html` - estilos CSS para nuevas features
-
-### 🚀 APK actualizado:
-- **Última compilación:** 2026-05-07 10:37 (LIMPIA)
-- Build exitoso: `./gradlew clean && ./gradlew assembleDebug`
-- Ubicación: `android/app/build/outputs/apk/debug/app-debug.apk`
-- Tamaño: 3.7MB
-- Listo para instalar en dispositivo
-
-### ⚠️ IMPORTANTE - Cómo instalar APK actualizado:
-**Debes DESINSTALAR la app vieja primero:**
-1. En el móvil: Ajustes → Apps → MD Viewer → Desinstalar
-2. Luego instalar el nuevo APK:
-   - Opción A: `adb install C:\Users\cra\Proyectos\md-viewer\android\app\build\outputs\apk\debug\app-debug.apk`
-   - Opción B: Copiar APK al móvil e instalar manualmente
-
-**Script automático de build:**
-Usa `build-android.bat` para compilar todo automáticamente:
-```batch
-cd C:\Users\cra\Proyectos\md-viewer
-build-android.bat
-```
-
----
-
-## 🎯 Descripción del Proyecto
-
-Visor de Markdown móvil con sistema de lectura avanzado. Permite importar archivos/carpetas, mantener progreso de lectura, bookmarks, highlights y gestión por long-press.
+## 🎯 Descripción
+
+Visor de Markdown móvil con:
+- Importación archivos/carpetas con estructura preservada
+- Sistema lectura: Ticks ✓, bookmarks 📍, highlights 🖍️
+- Long-press delete (500ms)
+- Tabs, búsqueda global, árbol recursivo
 
 ---
 
 ## 📦 Arquitectura Modular
 
-### Ubicación de archivos
 ```
-md-viewer/
-├── public/
-│   ├── index.html              # UI + CSS embebido
-│   ├── app.js                  # Orquestador principal
-│   └── modules/
-│       ├── storage.js          # Gestión de archivos + metadata
-│       ├── import.js           # Importación de archivos/carpetas
-│       ├── folderOperations.js # CRUD de carpetas
-│       ├── fileOperations.js   # CRUD de archivos
-│       ├── render.js           # Renderizado UI (árbol, MD, búsqueda)
-│       ├── search.js           # Motor de búsqueda
-│       ├── tabs.js             # Sistema de pestañas
-│       ├── ui.js               # Helpers UI (toast, sidebar)
-│       ├── utils.js            # Utilidades (escape, encoding)
-│       ├── readingProgress.js  # ✅ NUEVO: Lectura, bookmarks, highlights
-│       └── longPress.js        # ✅ NUEVO: Detección gestos táctiles
-├── android/                    # Proyecto Android
-├── ios/                        # Proyecto iOS
-├── server.js                   # Dev server (solo desarrollo web)
-└── package.json
+public/
+├── index.html              # UI + CSS embebido
+├── app.js                  # Orquestador principal
+└── modules/
+    ├── storage.js          # Gestión archivos + metadata
+    ├── import.js           # Importación archivos/carpetas
+    ├── render.js           # Renderizado UI (árbol, MD)
+    ├── readingProgress.js  # Lectura, bookmarks, highlights
+    ├── longPress.js        # Gestos táctiles
+    ├── tabs.js, search.js, ui.js, utils.js
+    └── folderOperations.js, fileOperations.js
 ```
 
 ---
 
-## ✅ Funcionalidades Implementadas
+## ✅ Funcionalidades Clave
 
-### 1. **Importación de Archivos/Carpetas**
-- **Módulo:** `modules/import.js`
-- **Funciones:**
-  - `importFiles()` - Importa múltiples archivos MD preservando estructura
-  - `importFolder()` - Alias de importFiles (el plugin preserva paths automáticamente)
+### 1. Importación
 - **Plugin:** `@capawesome/capacitor-file-picker`
-- **Capacitor API:** `FilePicker.pickFiles({ multiple: true, readData: true })`
-- **Storage:** Los archivos se guardan en `DATA/md-viewer-docs/` con estructura de carpetas
+- Preserva estructura de carpetas/subcarpetas
+- Soporta: .md, .txt, .zip (descomprime automático)
+- **Desktop:** Drag & drop con carpetas recursivas
 
-### 2. **Árbol de Carpetas Recursivo**
-- **Módulo:** `modules/render.js:6-72`
-- **Funciones:**
-  - `buildFileTree(files)` - Construye árbol desde flat array
-  - `insertIntoTree(node, parts, file)` - Inserta recursivamente
-  - `renderTreeNode(node, currentFile, pathPrefix)` - Renderiza HTML recursivo
-  - `countFiles(node)` - Cuenta archivos en rama
-- **Soporte:** Múltiples niveles (carpeta/subcarpeta/archivo.md)
-- **UI:** Iconos ▶, contador de archivos por carpeta
+### 2. Árbol Recursivo
+- Múltiples niveles con iconos ▶
+- Contador de archivos por carpeta
+- `buildFileTree()` → `renderTreeNode()` recursivo
 
-### 3. **Sistema de Lectura (Ticks)**
-- **Módulo:** `modules/readingProgress.js:7-15`
-- **Función:** `toggleReadStatus(filePath)`
-- **Storage:** `file.read: boolean`
-- **UI:**
-  - Botón ○/✓ en header del documento
-  - Tick verde ✓ en sidebar junto al archivo
+### 3. Sistema Lectura
+- **Ticks:** ○/✓ marca leídos
+- **Bookmarks:** 📍 guarda posición scroll
+- **Highlights:** 🖍️ subraya texto (multi-color, multi-palabra)
+  - Long-press 500ms para eliminar
+  - Menú flotante con 4 colores
+  - Usa `extractContents()` para nodos complejos
 
-### 4. **Sistema de Bookmarks (Marcadores)**
-- **Módulo:** `modules/readingProgress.js:17-52`
-- **Funciones:**
-  - `saveBookmark(filePath)` - Guarda scroll position + porcentaje
-  - `goToBookmark(filePath)` - Vuelve a posición guardada (smooth scroll)
-  - `clearBookmark(filePath)` - Elimina marcador
-- **Storage:** `file.bookmark: {scroll: number, percent: number, timestamp: string}`
-- **UI:**
-  - Botón 📍 (guardar) / 📌 (ir a marcador) en header
-  - Icono 📌 en sidebar si hay bookmark
+### 4. Long-Press Delete
+- 500ms sobre archivo/carpeta → menú contextual
+- Vibración háptica + animación
+- Compatible touch/mouse
 
-### 5. **Sistema de Subrayado (Highlights)**
-- **Módulo:** `modules/readingProgress.js:54-165`
-- **Funciones:**
-  - `toggleHighlightMode()` - Activa/desactiva modo subrayado
-  - `handleTextSelection(event)` - Detecta selección de texto
-  - `restoreHighlights(file)` - Restaura subrayados al abrir archivo
-  - `clearAllHighlights(filePath)` - Elimina todos
-  - `setHighlightColor(color)` - Cambia color de subrayado
-- **Storage:** `file.highlights: [{id, text, color, timestamp}]`
-- **UI:**
-  - Botón 🖍️ en header (se ilumina cuando está activo)
-  - `body.highlight-mode` class para cursor crosshair
-  - Spans con `.highlight` class y background color
-- **Funcionamiento:**
-  1. Click en 🖍️ → activa modo
-  2. Selecciona texto → se envuelve en `<span class="highlight">`
-  3. Se guarda en metadata del archivo
-  4. Al reabrir archivo → `restoreHighlights()` reconstruye los spans
-
-### 6. **Long-Press Delete (Gestos Táctiles)**
-- **Módulo:** `modules/longPress.js`
-- **Duración:** 500ms
-- **Eventos soportados:**
-  - `touchstart` / `touchend` / `touchmove` (móvil)
-  - `mousedown` / `mouseup` (desktop)
-  - `contextmenu` (click derecho)
-- **Funcionamiento:**
-  1. Mantén pulsado 500ms sobre archivo/carpeta
-  2. Vibración háptica (si disponible)
-  3. Aparece menú contextual con animación
-  4. Options: "Eliminar" o "Cancelar"
-- **UI:** Menú contextual `.context-menu` con estilos animados
-- **Inicialización:** Event delegation en `#fileTree`
-
-### 7. **Sistema de Pestañas (Tabs)**
-- **Módulo:** `modules/tabs.js`
-- **Funciones:** `addTab()`, `closeTab()`, `switchToTab()`, etc.
-- **UI:** Tabs horizontales con scroll, botón × para cerrar
-
-### 8. **Búsqueda Global**
-- **Módulo:** `modules/search.js`
-- **Funciona:** Busca en todos los archivos importados
-- **UI:** Barra de búsqueda en header, resultados con snippets resaltados
-
-### 9. **Renderizado Markdown**
-- **Librería:** `marked.js` + `highlight.js`
-- **Módulo:** `modules/render.js:74-123`
-- **Función:** `renderMarkdown(file)`
-- **Features:**
-  - GitHub Flavored Markdown
-  - Syntax highlighting para código
-  - Botón "Copiar" en bloques de código
-  - Vista Raw opcional
-  - Dark theme optimizado para OLED
+### 5. TOC Navigation
+- Slugify automático de headers
+- Scroll suave + highlight temporal (2s)
+- Funciona con TOC manuales y generados
 
 ---
 
-## 🗄️ Modelo de Datos (Storage)
-
-### FileIndex Structure
-Cada archivo tiene la siguiente estructura:
+## 🗄️ Modelo de Datos
 
 ```javascript
 {
-  path: "carpeta/subcarpeta/archivo.md",  // Path completo con carpetas
-  name: "archivo.md",                      // Solo nombre del archivo
-  content: "# Contenido...",               // Contenido raw del archivo
-
-  // ✅ Metadata de lectura (añadida en v2.0)
-  read: false,                             // true si está marcado como leído
-  bookmark: null | {                       // null o posición guardada
-    scroll: 1234,                          // Posición de scroll
-    percent: 45,                           // Porcentaje leído
-    timestamp: "2026-05-07T..."           // Cuándo se guardó
+  path: "carpeta/archivo.md",
+  name: "archivo.md",
+  content: "# Contenido...",
+  read: false,                    // ✓ Tick lectura
+  bookmark: {                     // 📍 Posición guardada
+    scroll: 1234,
+    percent: 45,
+    timestamp: "2026-05-07T..."
   },
-  highlights: [                            // Array de subrayados
+  highlights: [                   // 🖍️ Subrayados
     {
       id: "1714567890123",
-      text: "texto subrayado",
+      text: "texto",
       color: "#ffd700",
       timestamp: "2026-05-07T..."
     }
@@ -676,274 +133,185 @@ Cada archivo tiene la siguiente estructura:
 }
 ```
 
-### Storage Backend
-- **Plugin:** `@capacitor/preferences` (key-value storage)
-- **Key:** `"fileIndex"`
-- **Value:** JSON.stringify(fileIndex)
-- **Funciones:**
-  - `loadFileIndex()` - Carga al inicio
-  - `saveFileIndex()` - Guarda después de cada cambio
-  - `updateFileMetadata(path, metadata)` - ✅ NUEVO: Actualiza metadata específica
-
-### Filesystem Storage
-- **Plugin:** `@capacitor/filesystem`
-- **Directory:** `DATA/md-viewer-docs/`
-- **Estructura:** Preserva jerarquía de carpetas
-- **Ejemplo:** `DATA/md-viewer-docs/carpeta/subcarpeta/archivo.md`
+**Storage:**
+- `@capacitor/preferences` → fileIndex (JSON)
+- `@capacitor/filesystem` → DATA/md-viewer-docs/
 
 ---
 
-## 🎨 UI/UX
+## 🎨 UI Theme
 
-### Color Scheme (Dark Theme)
 ```css
---bg: #0f0f13           /* Background principal */
---surface: #17171f      /* Superficie (sidebar, cards) */
---surface2: #1e1e2a     /* Superficie secundaria (hover) */
---border: #2a2a3a       /* Bordes */
---accent: #5865f2       /* Acento principal (azul Discord) */
---accent2: #7289da      /* Acento secundario */
+--bg: #0f0f13           /* Background */
+--surface: #17171f      /* Sidebar */
+--accent: #5865f2       /* Azul Discord */
 --text: #e2e2f0         /* Texto principal */
---text-dim: #8888aa     /* Texto secundario */
---text-muted: #55557a   /* Texto deshabilitado */
 --green: #3ba55c        /* Success */
---red: #ed4245          /* Error/Delete */
---yellow: #faa61a       /* Warning */
+--red: #ed4245          /* Error */
 ```
 
-### Componentes Principales
-1. **Header** - Logo, búsqueda, botón hamburguesa (móvil)
-2. **Sidebar** - Árbol de carpetas/archivos, botón "Importar"
-3. **Main Area** - Tabs + Contenido renderizado
-4. **Doc Header** - Título, botones (○/✓, 📍/📌, 🖍️, Raw, ×)
-5. **Content Area** - Markdown renderizado con scrollbar custom
-6. **Context Menu** - Menú long-press con animación fade-in
-7. **Toast** - Notificaciones temporales (bottom center)
-
-### Mobile Optimizations
-- Safe area insets (notch support)
-- `-webkit-tap-highlight-color` para feedback táctil
-- `overscroll-behavior-y: contain` para evitar bounce
-- `-webkit-overflow-scrolling: touch`
-- Sidebar overlay con backdrop blur en móvil
+**Componentes:**
+1. Header → Logo, búsqueda, hamburguesa
+2. Sidebar → Árbol, botón "Importar"
+3. Main → Tabs + contenido MD renderizado
+4. Doc Header → Título, botones (○📍🖍️🎨)
+5. Context Menu → Long-press con animación
 
 ---
 
-## 🔧 Comandos de Desarrollo
+## 🔧 Comandos
 
-### Web (Desarrollo)
+### Desarrollo Web
 ```bash
-npm run dev:web          # Servidor en http://localhost:3000
+npm run dev:web          # http://localhost:3000
 ```
 
 ### Android
 ```bash
 npm run sync             # Sync web → Android/iOS
-npx cap sync android     # Solo Android
-npx cap open android     # Abrir Android Studio
-
-# Build APK
 cd android
-./gradlew assembleDebug  # → android/app/build/outputs/apk/debug/app-debug.apk
+./gradlew assembleDebug  # → apk/debug/app-debug.apk
 ```
 
-### iOS
+### Desktop (Electron)
 ```bash
-npx cap sync ios
-npx cap open ios         # Abrir Xcode
+npm run electron:build   # Build instalador
+npm run electron:start   # Dev mode
+```
+
+**Instalar APK:**
+```bash
+adb uninstall com.mdviewer.app
+adb install android/app/build/outputs/apk/debug/app-debug.apk
 ```
 
 ---
 
-## 🐛 Bugs Conocidos & Limitaciones
+## 🐛 Limitaciones
 
-### ✅ RESUELTO (v2.0)
-- ~~No se podían importar carpetas~~ → Ahora preserva estructura
-- ~~No había forma de marcar progreso de lectura~~ → Sistema de ticks
-- ~~No se podía volver a donde te quedaste leyendo~~ → Bookmarks
-- ~~No se podían subrayar conceptos importantes~~ → Highlights
-- ~~Había que usar botón × visible para eliminar~~ → Long-press delete
-
-### ⚠️ Limitaciones Actuales
-1. **Highlights basados en texto:** Si el contenido del archivo cambia, los highlights pueden desincronizarse (mejor solución: guardar posición DOM o line numbers)
-2. **Plugin de carpetas:** El FilePicker no tiene método `pickDirectory()` nativo, dependemos de que el path incluya la estructura
-3. **Sincronización:** No hay sync en la nube, todo es local
+1. **Highlights basados en texto:** Desincronización si cambia contenido
+2. **No sync cloud:** Todo es local
+3. **Plugin carpetas:** FilePicker no tiene `pickDirectory()` nativo
 
 ---
 
-## 📋 TODOs / Mejoras Futuras
+## 📋 TODOs
 
 ### Corto Plazo
-- [ ] Botón "Importar Carpeta" más explícito en UI
-- [ ] Tutorial/onboarding primera vez
-- [ ] Estadísticas de lectura (archivos leídos, tiempo estimado)
-- [ ] Filtros sidebar (solo leídos, solo con bookmarks)
+- [ ] Tutorial onboarding primera vez
+- [ ] Estadísticas de lectura
+- [ ] Filtros sidebar (solo leídos, con bookmarks)
 
 ### Medio Plazo
-- [ ] Exportar highlights a texto/PDF
-- [ ] Múltiples colores de highlight (paleta de colores)
+- [ ] Exportar highlights a PDF
 - [ ] Notas/comentarios por archivo
-- [ ] Tags/etiquetas personalizadas
-- [ ] Ordenar archivos (alfabético, fecha, custom)
+- [ ] Tags personalizadas
 
 ### Largo Plazo
-- [ ] Sync en la nube (Google Drive, Dropbox)
-- [ ] OCR para imágenes en markdown
-- [ ] Text-to-speech para lectura en voz alta
-- [ ] Modo lectura nocturna con brillo adaptativo
-- [ ] Spaced repetition system para repaso
+- [ ] Sync en nube (Google Drive, Dropbox)
+- [ ] Text-to-speech
+- [ ] Spaced repetition system
 
 ---
 
-## 🚀 Cómo Probar las Nuevas Funcionalidades
-
-### 1. Instalar APK
-```bash
-# El APK compilado está en:
-android/app/build/outputs/apk/debug/app-debug.apk
-
-# Instalar en dispositivo:
-adb install -r android/app/build/outputs/apk/debug/app-debug.apk
-```
-
-### 2. Importar Archivos con Carpetas
-1. Pulsa "📁 Importar archivos"
-2. Selecciona múltiples archivos de distintas carpetas
-3. La estructura se preservará automáticamente
-4. Verás carpetas con ▶ y contador de archivos
-
-### 3. Usar Sistema de Lectura
-1. Abre un archivo
-2. Click en ○ (arriba) → marca como leído ✓
-3. Aparece tick verde en sidebar
-4. Click de nuevo → desmarca
-
-### 4. Guardar Bookmark
-1. Scroll a una posición específica
-2. Click en 📍 → guarda posición
-3. Icono cambia a 📌 en header y sidebar
-4. Cierra archivo y vuelve a abrirlo
-5. Click en 📌 → vuelve a la posición (smooth scroll)
-
-### 5. Subrayar Texto
-1. Abre un archivo
-2. Click en 🖍️ (activa modo highlight)
-3. Botón se ilumina, cursor cambia a crosshair
-4. Selecciona texto → se subraya automáticamente en amarillo
-5. Cierra archivo y vuelve a abrirlo → subrayados persisten
-6. Click en 🖍️ de nuevo → desactiva modo
-
-### 6. Eliminar con Long-Press
-1. Mantén pulsado 500ms sobre archivo/carpeta
-2. Vibración + menú contextual aparece
-3. Click "Eliminar" → confirmación → elimina
-4. También funciona con click derecho (desktop)
-
----
-
-## 🔍 Debug & Troubleshooting
+## 🔍 Debug
 
 ### Errores comunes
+- **"No importa archivos"** → Verifica permisos AndroidManifest.xml
+- **"Highlights no restauran"** → Verifica `restoreHighlights()` en `renderMarkdown()`
+- **"Long-press no funciona"** → Verifica `initLongPress()` en app.js
 
-**"No se pueden importar archivos"**
-- Verifica permisos en `AndroidManifest.xml`
-- Comprueba que FilePicker plugin está instalado: `npx cap sync`
-- Mira logcat: `adb logcat | grep "capacitor"`
+### Logs
+```bash
+# Errores en tiempo real
+adb logcat -v time *:E
 
-**"Los highlights no se restauran"**
-- Asegúrate de que `restoreHighlights(file)` se llama en `renderMarkdown()`
-- Comprueba que `file.highlights` existe en storage
-- Los highlights son sensibles a cambios de contenido
-
-**"Long-press no funciona"**
-- Verifica que `initLongPress()` se llama en `app.js`
-- El listener usa event delegation en `#fileTree`
-- Comprueba que los elementos tienen `data-path` o `data-folder`
-
-**"Bookmarks no son precisos"**
-- El scroll se guarda en píxeles, puede variar si el viewport cambia
-- Considera guardar porcentaje en vez de píxeles absolutos
-
-### Logs útiles
-```javascript
-// En modules/readingProgress.js
-console.log('[DEBUG] Highlight saved:', highlight);
-console.log('[DEBUG] Bookmark:', file.bookmark);
-
-// En modules/storage.js
-console.log('[DEBUG] FileIndex saved:', fileIndex.length, 'files');
-```
-
----
-
-## 📚 Referencias de Plugins
-
-### @capacitor/filesystem
-```javascript
-// Escribir archivo
-await Filesystem.writeFile({
-  path: 'md-viewer-docs/archivo.md',
-  data: 'contenido...',
-  directory: 'DATA'
-});
-
-// Leer directorio
-await Filesystem.readdir({
-  path: 'md-viewer-docs/',
-  directory: 'DATA'
-});
-```
-
-### @capacitor/preferences
-```javascript
-// Guardar
-await Preferences.set({
-  key: 'fileIndex',
-  value: JSON.stringify(data)
-});
-
-// Cargar
-const { value } = await Preferences.get({ key: 'fileIndex' });
-const data = JSON.parse(value);
-```
-
-### @capawesome/capacitor-file-picker
-```javascript
-const result = await FilePicker.pickFiles({
-  types: ['text/markdown', 'text/plain', '*/*'],
-  multiple: true,      // Selección múltiple
-  readData: true       // Lee contenido en base64
-});
-
-// result.files[0].path → preserva estructura de carpetas
-// result.files[0].data → contenido en base64
+# Solo Capacitor
+adb logcat -v time | grep "Capacitor"
 ```
 
 ---
 
 ## 🎓 Notas para Claude
 
-### Al iniciar nueva conversación:
-1. **Leer este archivo primero** para entender estado del proyecto
-2. **NO reimplementar** funcionalidades ya existentes
-3. **Verificar módulos** antes de crear nuevos
-4. **Probar en móvil** antes de confirmar que algo funciona
+### Al iniciar sesión:
+1. Leer este archivo primero
+2. NO reimplementar funcionalidades existentes
+3. Verificar módulos antes de crear nuevos
+4. Probar en móvil antes de confirmar
 
-### Estructura modular:
-- Cada módulo es **independiente** (imports/exports ES6)
-- **No hay bundler**, los navegadores modernos soportan ES6 modules nativamente
-- **app.js** es el orquestador, expone funciones a `window` para onclick handlers
+### Arquitectura:
+- ES6 modules (sin bundler)
+- **app.js** expone funciones a `window` para onclick handlers
+- Async/await siempre con storage
 
-### Debugging:
-- **Web:** Abre DevTools en http://localhost:3000
-- **Android:** `adb logcat | grep capacitor` o Chrome DevTools (chrome://inspect)
-- **Async/await:** Asegúrate de que las funciones que llaman a storage sean async
+### Sistema de Auto-Update:
+**Deployment (IMPORTANTE):**
+1. Subir `version.json` a la raíz del repositorio GitHub
+2. Editar `version.json` con URLs reales de releases:
+   ```json
+   {
+     "version": "2.0.5",
+     "description": "Auto-update system + highlights + HTML fix",
+     "downloadUrls": {
+       "windows": "https://github.com/TU-USUARIO/md-viewer/releases/download/v2.0.5/MD.Viewer.Setup.2.0.5.exe",
+       "android": "https://github.com/TU-USUARIO/md-viewer/releases/download/v2.0.5/md-viewer-v2.0.5.apk"
+     }
+   }
+   ```
+3. Crear release en GitHub con los archivos:
+   - `MD Viewer Setup 2.0.5.exe` (dist/)
+   - `app-debug.apk` → renombrar a `md-viewer-v2.0.5.apk`
+4. Actualizar URLs en:
+   - `version.json` (GitHub repo)
+   - `public/modules/updater.js` línea 7 (si usas otro repo)
 
-### Antes de compilar APK:
-1. `npx cap sync android` → sincroniza cambios web
-2. `cd android && ./gradlew assembleDebug` → compila APK
-3. APK sale en `android/app/build/outputs/apk/debug/app-debug.apk`
+**Cómo funciona:**
+- App verifica updates al iniciar (delay 5s) y cada 6 horas
+- Fetch de `version.json` desde GitHub raw URL
+- Compara versiones semánticas (major.minor.patch)
+- Si hay update → banner animado con gradient
+- Click "Descargar" → abre navegador/descarga directa
+- Electron: usa `shell.openExternal()`
+- Android: usa `window.open(url, '_system')`
+
+### Build APK:
+```bash
+npx cap sync android
+cd android && ./gradlew assembleDebug
+```
 
 ---
 
-**Fin de memoria de proyecto. Actualizar este archivo con cada cambio significativo.**
+## 📚 Plugins Principales
+
+### @capacitor/filesystem
+```javascript
+await Filesystem.writeFile({
+  path: 'md-viewer-docs/archivo.md',
+  data: 'contenido...',
+  directory: 'DATA'
+});
+```
+
+### @capacitor/preferences
+```javascript
+await Preferences.set({
+  key: 'fileIndex',
+  value: JSON.stringify(data)
+});
+```
+
+### @capawesome/capacitor-file-picker
+```javascript
+const result = await FilePicker.pickFiles({
+  types: ['text/markdown', 'text/plain', '*/*'],
+  multiple: true,
+  readData: true
+});
+// result.files[0].path → preserva estructura
+```
+
+---
+
+**Última actualización:** 2026-05-11

@@ -113,3 +113,45 @@ export function removeFilesMatching(predicate) {
   fileIndex = fileIndex.filter(f => !predicate(f));
   return before - fileIndex.length;
 }
+
+// ── Save File with Embedded Highlights ────────────────────
+export async function saveFileWithHighlights(filePath) {
+  const file = getFile(filePath);
+  if (!file) {
+    throw new Error('File not found');
+  }
+
+  // Si no hay highlights, no hay nada que hacer
+  if (!file.highlights || file.highlights.length === 0) {
+    throw new Error('No hay subrayados para guardar');
+  }
+
+  // Obtener el contenido actual del .md-body renderizado
+  const mdBody = document.querySelector('.md-body');
+  if (!mdBody) {
+    throw new Error('No se encontró el contenido renderizado');
+  }
+
+  // Extraer el HTML con los highlights embebidos
+  let newContent = mdBody.innerHTML;
+
+  // Guardar el nuevo contenido en el archivo
+  file.content = newContent;
+  await saveFileIndex();
+
+  // Escribir a disco
+  try {
+    if (platform === 'electron') {
+      await window.electronAPI.filesystem.writeFile(filePath, newContent);
+    } else if (platform === 'capacitor') {
+      await Filesystem.writeFile({
+        path: `${APP_DIR}/${filePath}`,
+        data: newContent,
+        directory: 'DATA'
+      });
+    }
+  } catch (e) {
+    console.error('Error writing file to disk:', e);
+    throw new Error('Error al guardar el archivo: ' + (e.message || e));
+  }
+}
